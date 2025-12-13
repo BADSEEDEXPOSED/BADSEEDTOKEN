@@ -3,10 +3,11 @@
   publish = "dist"
   functions = "functions"
 
-[[functions]]
-  name = "amm-poller"
+[functions]
+  node_bundler = "esbuild"
+
+[functions.amm-poller]
   schedule = "*/1 * * * *"
 
-[[functions]]
-  name = "fee-worker"
+[functions.fee-worker]
   schedule = "*/5 * * * *"
