@@ -6,11 +6,10 @@
   directory = "functions"
   node_bundler = "esbuild"
 
-# Scheduled functions
 [[functions]]
   name = "amm-poller"
-  schedule = "*/1 * * * *" # every minute
+  schedule = "*/1 * * * *"
 
 [[functions]]
   name = "fee-worker"
-  schedule = "*/5 * * * *" # every 5 minutes
+  schedule = "*/5 * * * *"
