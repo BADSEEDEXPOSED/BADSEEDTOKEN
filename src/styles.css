@@ -1,0 +1,102 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #111827, #020617 60%);
+  color: #e5e7eb;
+}
+
+.app-root {
+  min-height: 100vh;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.muted {
+  color: #9ca3af;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.right {
+  text-align: right;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #1f2933;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.92);
+  border-radius: 12px;
+  border: 1px solid rgba(30, 64, 175, 0.4);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: #020617;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: #22c55e;
+  border-radius: 999px;
+}
+
+.bar-fill.curve {
+  background: #3b82f6;
+}
