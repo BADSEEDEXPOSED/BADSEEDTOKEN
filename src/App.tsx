@@ -1,5 +1,6 @@
 // src/App.tsx
 import React, { useEffect, useState } from "react";
+import trailerVideo from "./assets/trailer.mp4";
 
 type Summary = {
     mint: string;
@@ -146,7 +147,7 @@ const App: React.FC = () => {
                     muted
                     playsInline
                 >
-                    <source src="/badseed_trailer_v3.mp4" type="video/mp4" />
+                    <source src={trailerVideo} type="video/mp4" />
                 </video>
             </section>
         </div>
