@@ -1,7 +1,5 @@
-// src/App.tsx
 // Verified Push: 2025-12-13 22:32
 import React, { useEffect, useState } from "react";
-import trailerVideo from "./assets/trailer.mp4";
 
 type Summary = {
     mint: string;
@@ -141,15 +139,16 @@ const App: React.FC = () => {
             </section>
 
             <section className="video-section">
-                <video
-                    className="video-player"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                >
-                    <source src={trailerVideo} type="video/mp4" />
-                </video>
+                <div className="video-wrapper">
+                    <iframe
+                        className="video-player"
+                        src="https://www.youtube.com/embed/OMQ5NfgBdsA?autoplay=1&mute=1&controls=0&loop=1&playlist=OMQ5NfgBdsA&modestbranding=1&rel=0&iv_load_policy=3&fs=0"
+                        title="BadSeed Trailer"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    />
+                </div>
             </section>
         </div>
     );
