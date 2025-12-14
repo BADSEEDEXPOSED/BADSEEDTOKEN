@@ -139,12 +139,13 @@ const App: React.FC = () => {
             <section className="video-section">
                 <video
                     className="video-player"
-                    src="/trailer.mp4"
                     autoPlay
                     loop
                     muted
                     playsInline
-                />
+                >
+                    <source src="/badseed_trailer_v2.mp4" type="video/mp4" />
+                </video>
             </section>
         </div>
     );
