@@ -36,6 +36,7 @@ const App: React.FC = () => {
     const [summary, setSummary] = useState<Summary | null>(null);
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [loading, setLoading] = useState(true);
+    const videoRef = React.useRef<HTMLVideoElement>(null);
 
     const fetchAll = async () => {
         try {
@@ -59,6 +60,15 @@ const App: React.FC = () => {
         const interval = setInterval(fetchAll, 10_000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        // Force play when component mounts or updates
+        if (videoRef.current) {
+            videoRef.current.defaultMuted = true;
+            videoRef.current.muted = true;
+            videoRef.current.play().catch(e => console.error("Video play failed:", e));
+        }
+    }, [loading]); // Try playing when loading state changes too
 
     if (loading && !summary) {
         return (
@@ -138,13 +148,15 @@ const App: React.FC = () => {
 
             <section className="video-section">
                 <video
+                    ref={videoRef}
                     className="video-player"
                     autoPlay
                     loop
                     muted
                     playsInline
+                    webkit-playsinline="true"
                 >
-                    <source src="/badseed_trailer_v2.mp4" type="video/mp4" />
+                    <source src="/badseed_trailer_v3.mp4" type="video/mp4" />
                 </video>
             </section>
         </div>
