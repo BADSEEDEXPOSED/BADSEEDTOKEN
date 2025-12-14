@@ -1,4 +1,5 @@
 // src/App.tsx
+// Verified Push: 2025-12-13 22:32
 import React, { useEffect, useState } from "react";
 import trailerVideo from "./assets/trailer.mp4";
 
