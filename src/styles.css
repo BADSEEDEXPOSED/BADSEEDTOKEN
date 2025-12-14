@@ -1,11 +1,15 @@
 :root {
   color-scheme: dark;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  --bg-color: #000000;
+  --accent-color: #C0C0C0;
+  /* Silver */
+  --border-radius: 3px;
 }
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #111827, #020617 60%);
+  background: var(--bg-color);
   color: #e5e7eb;
 }
 
@@ -43,10 +47,12 @@ h1 {
 .badge {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid #1f2933;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--accent-color);
   font-size: 11px;
   margin-top: 4px;
+  color: #fff;
+  background: #000;
 }
 
 .grid {
@@ -57,9 +63,9 @@ h1 {
 }
 
 .card {
-  background: rgba(15, 23, 42, 0.92);
-  border-radius: 12px;
-  border: 1px solid rgba(30, 64, 175, 0.4);
+  background: #000;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--accent-color);
   padding: 12px 14px;
   margin-bottom: 12px;
 }
@@ -82,10 +88,11 @@ h1 {
 .bar {
   position: relative;
   height: 8px;
-  border-radius: 999px;
-  background: #020617;
+  border-radius: var(--border-radius);
+  background: #111;
   overflow: hidden;
   margin-top: 4px;
+  border: 1px solid #333;
 }
 
 .bar-fill {
@@ -94,9 +101,24 @@ h1 {
   top: 0;
   bottom: 0;
   background: #22c55e;
-  border-radius: 999px;
+  border-radius: var(--border-radius);
 }
 
 .bar-fill.curve {
-  background: #3b82f6;
+  background: var(--accent-color);
+}
+
+/* Video Section */
+.video-section {
+  width: 100%;
+  margin-top: 16px;
+  border: 1px solid var(--accent-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background: #000;
+}
+
+.video-player {
+  width: 100%;
+  display: block;
 }

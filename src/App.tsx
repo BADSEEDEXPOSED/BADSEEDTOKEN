@@ -135,6 +135,17 @@ const App: React.FC = () => {
                     donations.
                 </p>
             </section>
+
+            <section className="video-section">
+                <video
+                    className="video-player"
+                    src="/trailer.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                />
+            </section>
         </div>
     );
 };
