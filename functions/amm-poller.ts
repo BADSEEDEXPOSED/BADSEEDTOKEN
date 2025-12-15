@@ -18,6 +18,19 @@ export const handler: Handler = async () => {
             const state = await pump.getBondingCurveState(TOKEN_CONFIG.mint);
 
             if (state) {
+                const vSol = Number(state.virtualSolReserves) / 1e9;
+
+                // Strict Pre-Launch Detection (vSol Ground Truth)
+                // If vSol is < 30.05, we are still dormant.
+                if (vSol < 30.05) {
+                    mode = "pre-launch";
+                    await redis.set(redisKeys.mode, "pre-launch");
+                } else if (mode === "pre-launch") {
+                    // If we see volume, upgrade to pumpswap
+                    mode = "pumpswap";
+                    await redis.set(redisKeys.mode, "pumpswap");
+                }
+
                 priceSol = pump.calculatePrice(state);
                 curveProgress = pump.calculateProgress(state);
 
@@ -31,7 +44,16 @@ export const handler: Handler = async () => {
                     mode = "raydium";
                 }
             } else {
-                console.log("Bonding curve not found (yet).");
+                console.log("Bonding curve not found (Pre-Launch).");
+                mode = "pre-launch";
+                await redis.set(redisKeys.mode, "pre-launch");
+
+                // Set Initial Values
+                const INIT_VTOKEN = 1073000000;
+                const INIT_VSOL = 30;
+                priceSol = INIT_VSOL / INIT_VTOKEN;
+                curveProgress = 0;
+                marketCapSol = priceSol * 1000000000;
             }
         } catch (e) {
             console.error("PumpSwap polling error:", e);

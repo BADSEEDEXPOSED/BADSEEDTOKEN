@@ -42,7 +42,7 @@ export const handler: Handler = async () => {
                 curve_progress: 0,
                 total_fees_claimed_sol: 0,
                 total_donated_sol: 0,
-                mode: "pumpswap",
+                mode: "pre-launch",
                 last_updated: null
             })
         };
