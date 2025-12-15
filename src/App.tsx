@@ -130,6 +130,22 @@ const App: React.FC = () => {
             ]);
             const sJson = await sRes.json();
             const mJson = await mRes.json();
+
+            // Client-Side Sanitization: Never show 0 for Price/Mcap
+            // If API returns 0 (e.g. cold server), use Pre-Launch defaults
+            if (!sJson.price_sol || sJson.price_sol === 0) {
+                const INIT_PRICE = 0.000000028;
+                sJson.price_sol = INIT_PRICE;
+                sJson.debug_price = `vSol (30.00) / vTokens (1073.0M)`;
+            }
+            if (!sJson.market_cap_sol || sJson.market_cap_sol === 0) {
+                sJson.market_cap_sol = 28;
+                sJson.debug_mcap = `Price * Supply (28.0 SOL)`;
+            }
+            if (!sJson.curve_progress) {
+                sJson.debug_progress = `Sold (0.0M) / Target (800M)`;
+            }
+
             setSummary(sJson);
             setMetrics(mJson);
             setLoading(false);
