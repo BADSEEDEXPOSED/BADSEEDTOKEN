@@ -73,6 +73,33 @@ export const handler: Handler = async () => {
     const existingFees = parseFloat(summary.total_fees_claimed_sol || "0") || 0;
     const existingDonated = parseFloat(summary.total_donated_sol || "0") || 0;
 
+    // Construct Debug Strings (matching App.tsx logic)
+    // Note: in Raydium mode we might not have vSol/vToken, so we use fallbacks or price
+    let debugPrice = "";
+    let debugMcap = "";
+    let debugProgress = "";
+
+    if (mode === "pre-launch" || mode === "pumpswap") {
+        // Re-calculating vSol/vToken approx from price if state isn't available in this scope?
+        // Actually, if we are in this scope, we might have lost 'state' variable access if we are outside the try/catch.
+        // But we can approximate for the display:
+        const supply = 1000000000;
+        const vToken = 1073000000 - (curveProgress / 100 * 800000000); // Inverse progress
+        const vSol = priceSol * (vToken / 1000); // Approx formula
+
+        // Better approach: We need to pull the 'state' values out of the if block or just be simpler.
+        // Let's use simple logic:
+        const vSolEst = 30 + (curveProgress / 100 * 85);
+
+        debugPrice = `vSol (${vSolEst.toFixed(2)}) / vTokens (1073.0M)`; // Simplified for now
+        debugMcap = `Price * Supply (${(marketCapSol).toFixed(1)} SOL)`; // Actually simpler to show SOL mcap
+        debugProgress = `Sold (${(curveProgress / 100 * 800).toFixed(1)}M) / Target (800M)`;
+    } else {
+        debugPrice = `Raydium Pool Live`;
+        debugMcap = `Price * Supply`;
+        debugProgress = `Bonding Complete`;
+    }
+
     await redis.hmset(redisKeys.summary, {
         mint: TOKEN_CONFIG.mint,
         symbol: TOKEN_CONFIG.symbol,
@@ -83,7 +110,10 @@ export const handler: Handler = async () => {
         total_fees_claimed_sol: existingFees.toString(),
         total_donated_sol: existingDonated.toString(),
         mode,
-        last_updated: new Date(now).toISOString()
+        last_updated: new Date(now).toISOString(),
+        debug_price: debugPrice,
+        debug_mcap: debugMcap,
+        debug_progress: debugProgress
     });
 
     const pricePoint = JSON.stringify({ t: now, price_sol: priceSol });

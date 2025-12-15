@@ -19,7 +19,10 @@ export const handler: Handler = async () => {
             total_fees_claimed_sol: parseFloat(summary.total_fees_claimed_sol || "0"),
             total_donated_sol: parseFloat(summary.total_donated_sol || "0"),
             mode: summary.mode || "pumpswap",
-            last_updated: summary.last_updated || null
+            last_updated: summary.last_updated || null,
+            debug_price: summary.debug_price || "Calculating...",
+            debug_mcap: summary.debug_mcap || "Calculating...",
+            debug_progress: summary.debug_progress || "Calculating..."
         };
 
         return {
