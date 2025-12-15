@@ -1,7 +1,12 @@
 // lib/helius.ts
 import { ENV } from "./env";
 
-const HELIUS_RPC_URL = `https://mainnet.helius-rpc.com/?api-key=${ENV.HELIUS_API_KEY}`;
+const HELIUS_RPC_URL = ENV.HELIUS_API_KEY
+    ? `https://mainnet.helius-rpc.com/?api-key=${ENV.HELIUS_API_KEY}`
+    : "https://api.mainnet-beta.solana.com";
+
+import { Connection } from "@solana/web3.js";
+export const connection = new Connection(HELIUS_RPC_URL);
 
 /** Minimal JSON-RPC wrapper for Helius */
 export async function heliusRpc<T = any>(method: string, params: any[]): Promise<T> {

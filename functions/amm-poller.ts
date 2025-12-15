@@ -1,8 +1,9 @@
 // functions/amm-poller.ts
 import type { Handler } from "@netlify/functions";
-import { redis } from "@lib/redis";
-import { redisKeys, TOKEN_CONFIG } from "@lib/tokenConfig";
-import { getPumpAmmMetrics, getRaydiumMetrics } from "@lib/helius";
+import { redis } from "../lib/redis";
+import { redisKeys, TOKEN_CONFIG } from "../lib/tokenConfig";
+import { getRaydiumMetrics, connection } from "../lib/helius";
+import { PumpFunSDK } from "../lib/pump";
 
 export const handler: Handler = async () => {
     let mode = (await redis.get<string>(redisKeys.mode)) || "pumpswap";
@@ -12,13 +13,28 @@ export const handler: Handler = async () => {
     let curveProgress = 0;
 
     if (mode === "pumpswap") {
-        const m = await getPumpAmmMetrics();
-        priceSol = m.priceSol;
-        marketCapSol = m.marketCapSol;
-        curveProgress = m.curveProgress;
-        if (curveProgress >= 1) {
-            await redis.set(redisKeys.mode, "raydium");
-            mode = "raydium";
+        try {
+            const pump = new PumpFunSDK(connection);
+            const state = await pump.getBondingCurveState(TOKEN_CONFIG.mint);
+
+            if (state) {
+                priceSol = pump.calculatePrice(state);
+                curveProgress = pump.calculateProgress(state);
+
+                // Pump tokens: 6 decimals. Supply is usually 1B.
+                const supply = Number(state.tokenTotalSupply) / 1e6;
+                marketCapSol = priceSol * supply;
+
+                if (state.complete) {
+                    console.log("Bonding curve complete! Switching to Raydium.");
+                    await redis.set(redisKeys.mode, "raydium");
+                    mode = "raydium";
+                }
+            } else {
+                console.log("Bonding curve not found (yet).");
+            }
+        } catch (e) {
+            console.error("PumpSwap polling error:", e);
         }
     }
 
@@ -26,7 +42,7 @@ export const handler: Handler = async () => {
         const m = await getRaydiumMetrics();
         priceSol = m.priceSol;
         marketCapSol = m.marketCapSol;
-        curveProgress = 1;
+        curveProgress = 100; // Fixed 100%
     }
 
     const now = Date.now();
