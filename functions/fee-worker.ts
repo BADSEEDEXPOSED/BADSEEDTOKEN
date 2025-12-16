@@ -47,14 +47,23 @@ export const handler: Handler = async () => {
     const summary = (await redis.hgetall<Record<string, string>>(redisKeys.summary)) || {};
     const existingFees = parseFloat(summary.total_fees_claimed_sol || "0") || 0;
     const existingDonated = parseFloat(summary.total_donated_sol || "0") || 0;
+    const existingPreLaunch = parseFloat(summary.pre_launch_donated_sol || "0") || 0;
+    const currentMode = summary.mode || "pre-launch";
 
     const newFees = existingFees + amountSol;
     const newDonated = existingDonated + amountSol;
+
+    // Conditional Tracking: If we are in pre-launch, this transfer counts towards Seed Capital (Blue Bar)
+    let newPreLaunch = existingPreLaunch;
+    if (currentMode === "pre-launch") {
+        newPreLaunch += amountSol;
+    }
 
     await redis.hmset(redisKeys.summary, {
         ...summary,
         total_fees_claimed_sol: newFees.toString(),
         total_donated_sol: newDonated.toString(),
+        pre_launch_donated_sol: newPreLaunch.toString(),
         last_updated: new Date(now).toISOString()
     });
 

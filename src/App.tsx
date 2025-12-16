@@ -16,11 +16,76 @@ type Summary = {
     curve_progress: number;
     total_fees_claimed_sol: number;
     total_donated_sol: number;
+    pre_launch_donated_sol: number;
     mode: string;
     last_updated: string | null;
     debug_price?: string;
     debug_mcap?: string;
     debug_progress?: string;
+};
+
+type Metrics = {
+    // ... existing types ...
+};
+
+// ... existing helpers ...
+
+// ... inside App component ...
+// Update the "Total Donated" card section
+/* 
+<section className="card">
+    <div className="label">Total Donated</div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <div className="value">{formatSol(summary.total_donated_sol)}</div>
+        <div style={{ textAlign: 'right' }}>
+             {solPrice && (
+                <div className="value" style={{ fontSize: '14px', color: '#86efac' }}>
+                    1 SOL = ${solPrice.toFixed(2)}
+                </div>
+            )}
+            <div className="small muted" style={{ fontSize: '10px', marginTop: '4px' }}>
+                <span style={{color: '#60a5fa'}}>Pre: {summary.pre_launch_donated_sol.toFixed(2)}</span>
+                <span style={{margin: '0 4px'}}>|</span>
+                <span style={{color: '#4ade80'}}>Fees: {(summary.total_donated_sol - summary.pre_launch_donated_sol).toFixed(2)}</span>
+            </div>
+        </div>
+    </div>
+</section> 
+*/
+
+// Updated DonationProgress Component
+const DonationProgress: React.FC<{ donated: number; goal: number; pre: number }> = ({ donated, goal, pre }) => {
+    const totalPct = Math.min(100, (donated / goal) * 100);
+    const prePct = Math.min(100, (pre / goal) * 100);
+    const feePct = Math.max(0, totalPct - prePct);
+
+    return (
+        <div>
+            <div className="small muted" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>{donated.toFixed(4)} / {goal} SOL</span>
+                <span style={{ fontSize: '10px', opacity: 0.8 }}>
+                    <span style={{ color: '#60a5fa' }}>Seed</span> + <span style={{ color: '#4ade80' }}>Fees</span>
+                </span>
+            </div>
+            <div className="bar" style={{ display: 'flex', overflow: 'hidden' }}>
+                {/* Pre-Launch Segment (Blue) */}
+                <div style={{
+                    width: `${prePct}%`,
+                    backgroundColor: '#60a5fa', // Tailwind blue-400
+                    height: '100%',
+                    transition: 'width 0.5s ease'
+                }} />
+
+                {/* Creator Fees Segment (Green) */}
+                <div style={{
+                    width: `${feePct}%`,
+                    backgroundColor: '#4ade80', // Tailwind green-400
+                    height: '100%',
+                    transition: 'width 0.5s ease'
+                }} />
+            </div>
+        </div>
+    );
 };
 
 type Metrics = {
@@ -217,6 +282,7 @@ const App: React.FC = () => {
                             curve_progress: progress,
                             total_fees_claimed_sol: 0,
                             total_donated_sol: 0,
+                            pre_launch_donated_sol: 0,
                             mode: isPreLaunch ? "pre-launch" : "pumpswap",
                             last_updated: new Date().toISOString(),
                             debug_price: `vSol (${vSol.toFixed(2)}) / vTokens (${(vToken / 1e6).toFixed(1)}M)`,
@@ -246,6 +312,7 @@ const App: React.FC = () => {
                             curve_progress: 0,
                             total_fees_claimed_sol: 0,
                             total_donated_sol: 0,
+                            pre_launch_donated_sol: 0,
                             mode: "pre-launch",
                             last_updated: new Date().toISOString(),
                             debug_price: `vSol (${INIT_VSOL.toFixed(2)}) / vTokens (${(INIT_VTOKEN / 1e6).toFixed(1)}M)`,
@@ -313,10 +380,17 @@ const App: React.FC = () => {
                     <div className="small right">
                         <div>Creator: {shorten(summary.creator_wallet)}</div>
                         <div>Donation: {shorten(summary.donation_wallet)}</div>
-                        <div className="badge">
-                            {summary.mode === "raydium" ? "Raydium Phase" :
-                                summary.mode === "pre-launch" ? "Pre-Launch Phase" :
-                                    "PumpSwap Phase"}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', justifyContent: 'flex-end' }}>
+                            {solPrice && (
+                                <div className="badge" style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#86efac', border: '1px solid rgba(134, 239, 172, 0.2)' }}>
+                                    1 SOL = ${solPrice.toFixed(2)}
+                                </div>
+                            )}
+                            <div className="badge">
+                                {summary.mode === "raydium" ? "Raydium Phase" :
+                                    summary.mode === "pre-launch" ? "Pre-Launch Phase" :
+                                        "PumpSwap Phase"}
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -340,18 +414,20 @@ const App: React.FC = () => {
                         <div className="label">Total Donated</div>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                             <div className="value">{formatSol(summary.total_donated_sol)}</div>
-                            {solPrice && (
-                                <div className="value" style={{ fontSize: '14px', color: '#86efac' }}>
-                                    1 SOL = ${solPrice.toFixed(2)}
+                            <div style={{ textAlign: 'right' }}>
+                                <div className="small muted" style={{ fontSize: '10px', marginTop: '4px' }}>
+                                    <span style={{ color: '#60a5fa' }}>Pre: {summary.pre_launch_donated_sol.toFixed(4)}</span>
+                                    <span style={{ margin: '0 4px' }}>|</span>
+                                    <span style={{ color: '#4ade80' }}>Fees: {(summary.total_donated_sol - summary.pre_launch_donated_sol).toFixed(4)}</span>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <section className="card">
-                    <div className="label">Donation Progress</div>
-                    <DonationProgress donated={summary.total_donated_sol} goal={100} />
+                    <div className="label">Seed Capital</div>
+                    <DonationProgress donated={summary.total_donated_sol} goal={100} pre={summary.pre_launch_donated_sol} />
                 </section>
 
                 <section className="card debug-card">
@@ -388,19 +464,7 @@ const App: React.FC = () => {
     );
 };
 
-const DonationProgress: React.FC<{ donated: number; goal: number }> = ({ donated, goal }) => {
-    const pct = Math.min(100, (donated / goal) * 100);
-    return (
-        <div>
-            <div className="small muted">
-                {donated.toFixed(4)} / {goal} SOL
-            </div>
-            <div className="bar">
-                <div className="bar-fill" style={{ width: `${pct}%` }} />
-            </div>
-        </div>
-    );
-};
+
 
 
 

@@ -28,6 +28,7 @@ export const handler: Handler = async () => {
             curve_progress: parseFloat(summary.curve_progress || "0"),
             total_fees_claimed_sol: parseFloat(summary.total_fees_claimed_sol || "0"),
             total_donated_sol: parseFloat(summary.total_donated_sol || "0"),
+            pre_launch_donated_sol: parseFloat(summary.pre_launch_donated_sol || "0"),
             mode: mode,
             last_updated: summary.last_updated || null,
             debug_price: summary.debug_price || `vSol (30.00) / vTokens (1073.0M)`,
