@@ -21,15 +21,19 @@ export const handler: Handler = async () => {
     // We scan the Donation Wallet's history for INCOMING transfers from the Creator Wallet.
     // This allows us to catch Manual Transfers + Auto Transfers and maintain a "Scoreboard" that never decreases.
 
-    const lastSig = await redis.get<string>(`token:LAST_SIG:${TOKEN_CONFIG.mint}`);
+    // VERSION CHECK: If we are on V2 keys but have no signature, this is a FRESH RESET.
+    const lastSig = await redis.get<string>(`token:LAST_SIG_V2:${TOKEN_CONFIG.mint}`);
     let newSigs: any[] = [];
 
     // Fetch signatures for Donation Wallet (receives funds)
     // We look for transactions until the last one we processed.
     try {
-        const options: any = { limit: 20 };
+        // Deep Scan Limit: 100 transactions should cover the entire history for now.
+        const options: any = { limit: 100 };
         if (lastSig) {
             options.until = lastSig;
+        } else {
+            console.log("No last signature found. Performing FULL HISTORY SCAN (V2 Reset).");
         }
         newSigs = await connection.getSignaturesForAddress(donationPubkey, options);
     } catch (e) {
@@ -74,7 +78,7 @@ export const handler: Handler = async () => {
         }
 
         // Update the last processed signature being the most recent one (index 0)
-        await redis.set(`token:LAST_SIG:${TOKEN_CONFIG.mint}`, newSigs[0].signature);
+        await redis.set(`token:LAST_SIG_V2:${TOKEN_CONFIG.mint}`, newSigs[0].signature);
     }
 
     // --- End Scanner Logic ---
