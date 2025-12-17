@@ -75,5 +75,5 @@ export const handler: Handler = async () => {
     await redis.zadd(redisKeys.tsFeesCum, { score: now, member: feesCumPoint });
     await redis.zadd(redisKeys.tsDonationsCum, { score: now, member: donationsCumPoint });
 
-    return { statusCode: 200, body: JSON.stringify({ ok: true, forwarded: amountSol, sig }) };
+    return { statusCode: 200, body: JSON.stringify({ ok: true, forwarded: forwardedAmount, total_donated: totalDonatedSol, sig }) };
 };
