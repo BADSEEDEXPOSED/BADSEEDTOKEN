@@ -75,6 +75,25 @@ body {
 /* The spacer itself should be transparent to events if we want zoom to work over it */
 /* But wait, if spacer is auto, it blocks zoom. If none, it allows zoom. */
 /* User wants to interact with background (zoom/rotate) => pointer-events: none */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 5px #4ade80, 0 0 10px #4ade80 inset;
+  }
+
+  50% {
+    box-shadow: 0 0 20px #4ade80, 0 0 30px #4ade80 inset;
+  }
+
+  100% {
+    box-shadow: 0 0 5px #4ade80, 0 0 10px #4ade80 inset;
+  }
+}
+
+.bar.overcharged {
+  animation: pulse-glow 2s infinite ease-in-out;
+  border: 1px solid #4ade80;
+}
+
 .spacer {
   height: 150vh;
   /* Reduced to provide ample but not excessive scrolling space */

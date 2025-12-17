@@ -54,20 +54,31 @@ type Metrics = {
 */
 
 // Updated DonationProgress Component
+
 const DonationProgress: React.FC<{ donated: number; goal: number; pre: number }> = ({ donated, goal, pre }) => {
-    const totalPct = Math.min(100, (donated / goal) * 100);
-    const prePct = Math.min(100, (pre / goal) * 100);
-    const feePct = Math.max(0, totalPct - prePct);
+    // Visual clamping: Bar cannot exceed 100% width, but text can exceed goal.
+    const effectiveDonated = Math.min(donated, goal); // Used for bar width only? No, we want FULL bar if over.
+    // If donated > goal, totalPct is > 100. We must clamp width to 100%.
+
+    const totalWidthPct = Math.min(100, (donated / goal) * 100);
+
+    // Calculate segments based on limited width
+    const prePct = Math.min(totalWidthPct, (pre / goal) * 100);
+    const feePct = totalWidthPct - prePct;
+
+    const isOvercharged = donated > goal;
 
     return (
         <div>
             <div className="small muted" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>{donated.toFixed(4)} / {goal} SOL</span>
+                <span style={isOvercharged ? { color: '#4ade80', fontWeight: 'bold' } : {}}>
+                    {donated.toFixed(4)} / {goal} SOL
+                </span>
                 <span style={{ fontSize: '10px', opacity: 0.8 }}>
                     <span style={{ color: '#60a5fa' }}>Seed</span> + <span style={{ color: '#4ade80' }}>Fees</span>
                 </span>
             </div>
-            <div className="bar" style={{ display: 'flex', overflow: 'hidden' }}>
+            <div className={`bar ${isOvercharged ? 'overcharged' : ''}`} style={{ display: 'flex', overflow: 'hidden' }}>
                 {/* Pre-Launch Segment (Blue) */}
                 <div style={{
                     width: `${prePct}%`,
