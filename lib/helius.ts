@@ -30,7 +30,32 @@ export async function getPumpAmmMetrics() {
     return { priceSol: 0, marketCapSol: 0, curveProgress: 0 };
 }
 
-/** Placeholder for Raydium metrics – returns zeros until real implementation */
+/** Real implementation using Jupiter Price API for post-migration data */
 export async function getRaydiumMetrics() {
-    return { priceSol: 0, marketCapSol: 0 };
+    try {
+        const MINT = "3HPpMLK7LjKFqSnCsBYNiijhNTo7dkkx3FCSAHKSpump";
+        // Fetch price in SOL (vsToken = wSOL)
+        // wSOL = So11111111111111111111111111111111111111112
+        const url = `https://api.jup.ag/price/v2?ids=${MINT}&vsToken=So11111111111111111111111111111111111111112`;
+
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Jupiter API failed");
+
+        const json = await res.json();
+        const data = json.data[MINT];
+
+        if (!data || !data.price) {
+            return { priceSol: 0, marketCapSol: 0 };
+        }
+
+        const priceSol = parseFloat(data.price);
+        // Standard supply is 1B for Pump.fun tokens
+        const marketCapSol = priceSol * 1000000000;
+
+        return { priceSol, marketCapSol };
+
+    } catch (e) {
+        console.warn("Error fetching Raydium/Jupiter metrics:", e);
+        return { priceSol: 0, marketCapSol: 0 };
+    }
 }

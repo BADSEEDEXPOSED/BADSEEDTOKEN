@@ -12,15 +12,7 @@ export const handler: Handler = async () => {
     let marketCapSol = 0;
     let curveProgress = 0;
 
-    // --- LATCH LOGIC: Once Raydium, ALWAYS Raydium ---
-    if (mode === "raydium") {
-        console.log("Mode is Raydium. Skipping PumpFun checks.");
-        const m = await getRaydiumMetrics();
-        priceSol = m.priceSol;
-        marketCapSol = m.marketCapSol;
-        curveProgress = 100;
-    } else {
-        // Mode is 'pre-launch' or 'pumpswap'. Check Bonding Curve.
+    if (mode === "pumpswap") {
         try {
             const pump = new PumpFunSDK(connection);
             const state = await pump.getBondingCurveState(TOKEN_CONFIG.mint);
@@ -28,16 +20,15 @@ export const handler: Handler = async () => {
             if (state) {
                 const vSol = Number(state.virtualSolReserves) / 1e9;
 
-                // Strict Pre-Launch Detection
+                // Strict Pre-Launch Detection (vSol Ground Truth)
+                // If vSol is < 30.05, we are still dormant.
                 if (vSol < 30.05) {
                     mode = "pre-launch";
                     await redis.set(redisKeys.mode, "pre-launch");
-                } else {
-                    // If we were pre-launch, upgrade to pumpswap
-                    if (mode === "pre-launch") {
-                        mode = "pumpswap";
-                        await redis.set(redisKeys.mode, "pumpswap");
-                    }
+                } else if (mode === "pre-launch") {
+                    // If we see volume, upgrade to pumpswap
+                    mode = "pumpswap";
+                    await redis.set(redisKeys.mode, "pumpswap");
                 }
 
                 priceSol = pump.calculatePrice(state);
@@ -49,10 +40,8 @@ export const handler: Handler = async () => {
 
                 if (state.complete) {
                     console.log("Bonding curve complete! Switching to Raydium.");
-                    // THE ONE-WAY DOOR: Set to Raydium. Next run will skip this block.
                     await redis.set(redisKeys.mode, "raydium");
                     mode = "raydium";
-                    curveProgress = 100;
                 }
             } else {
                 console.log("Bonding curve not found (Pre-Launch).");
@@ -69,6 +58,13 @@ export const handler: Handler = async () => {
         } catch (e) {
             console.error("PumpSwap polling error:", e);
         }
+    }
+
+    if (mode === "raydium") {
+        const m = await getRaydiumMetrics();
+        priceSol = m.priceSol;
+        marketCapSol = m.marketCapSol;
+        curveProgress = 100; // Fixed 100%
     }
 
     const now = Date.now();

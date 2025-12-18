@@ -28,18 +28,19 @@ export const handler: Handler = async (event) => {
         let lastSignature = null;
 
         for (const tx of transactions) {
-            // RELAXED CHECK: We don't care about the type label (e.g. "SOL_TRANSFER").
-            // We only care if there are native transfers matching our criteria.
-            if (tx.nativeTransfers && Array.isArray(tx.nativeTransfers)) {
-                for (const transfer of tx.nativeTransfers) {
-                    if (
-                        transfer.fromUserAccount === TOKEN_CONFIG.creatorWallet &&
-                        transfer.toUserAccount === TOKEN_CONFIG.donationWallet
-                    ) {
-                        const sol = transfer.amount / 1e9;
-                        donatedDelta += sol;
-                        lastSignature = tx.signature;
-                        console.log(`Webhook detected transfer: ${sol} SOL from ${tx.signature}`);
+            // BULLETPROOF MATH: We check accountData for net balance changes.
+            // This captures transfers, swaps, rug-pulls, and complex contract interactions.
+            if (tx.accountData && Array.isArray(tx.accountData)) {
+                for (const accountEntry of tx.accountData) {
+                    if (accountEntry.account === TOKEN_CONFIG.donationWallet) {
+                        // nativeBalanceChange is the net change in lamports
+                        // We only care if money ARRIVED > 0
+                        if (accountEntry.nativeBalanceChange > 0) {
+                            const sol = accountEntry.nativeBalanceChange / 1e9;
+                            donatedDelta += sol;
+                            lastSignature = tx.signature;
+                            console.log(`Webhook detected Inflow: +${sol} SOL (Tx: ${tx.signature})`);
+                        }
                     }
                 }
             }

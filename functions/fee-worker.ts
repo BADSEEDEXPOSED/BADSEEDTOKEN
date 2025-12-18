@@ -57,18 +57,22 @@ export const handler: Handler = async () => {
         for (const tx of txs) {
             if (!tx || !tx.meta || tx.meta.err) continue;
 
-            const accountKeys = tx.transaction.message.accountKeys;
-            const donationIndex = accountKeys.findIndex((k: any) => k.pubkey.toBase58() === donationPubkey.toBase58());
-
-            if (donationIndex !== -1) {
-                const pre = tx.meta.preBalances[donationIndex] || 0;
-                const post = tx.meta.postBalances[donationIndex] || 0;
-                const deltaLamports = post - pre;
-
-                if (deltaLamports > 0) {
-                    const sol = deltaLamports / 1e9;
-                    detectedNewDonations += sol;
-                    console.log(`Bullet-Proof Scanner: Found +${sol} SOL in tx ${tx.transaction.signatures[0]}`);
+            // Deep scan for SystemProgram.transfer
+            const instructions = tx.transaction.message.instructions;
+            for (const ix of instructions) {
+                // Check if it's a parsed system instruction
+                if ('program' in ix && ix.program === 'system') {
+                    const parsed = (ix as any).parsed;
+                    if (parsed.type === 'transfer') {
+                        const info = parsed.info;
+                        // LOGIC: IF From = Creator AND To = Donation
+                        if (info.source === creator.publicKey.toBase58() && info.destination === donationPubkey.toBase58()) {
+                            const lamports = info.lamports;
+                            const sol = lamports / 1e9;
+                            detectedNewDonations += sol;
+                            console.log(`Detected manual/auto transfer: ${sol} SOL`);
+                        }
+                    }
                 }
             }
         }
