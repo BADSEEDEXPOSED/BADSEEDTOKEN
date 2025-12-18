@@ -12,5 +12,6 @@ export const ENV = {
     UPSTASH_REDIS_REST_URL: requireEnv("UPSTASH_REDIS_REST_URL"),
     UPSTASH_REDIS_REST_TOKEN: requireEnv("UPSTASH_REDIS_REST_TOKEN"),
     HELIUS_API_KEY: requireEnv("HELIUS_API_KEY"),
-    CREATOR_SECRET_KEY: requireEnv("CREATOR_SECRET_KEY") // JSON array string of 64-byte secret key
+    CREATOR_SECRET_KEY: requireEnv("CREATOR_SECRET_KEY"), // JSON array string of 64-byte secret key
+    WEBHOOK_AUTH_TOKEN: process.env.WEBHOOK_AUTH_TOKEN || "superfancysecretbadseed" // Optional, with default
 };

@@ -28,11 +28,10 @@ export const handler: Handler = async (event) => {
         let lastSignature = null;
 
         for (const tx of transactions) {
-            if (tx.type === "SOL_TRANSFER" && !tx.error) {
-                // Check each transfer within the transaction
-                // Webhook data usually has simplified 'nativeTransfers'
-                const transfers = tx.nativeTransfers || [];
-                for (const transfer of transfers) {
+            // RELAXED CHECK: We don't care about the type label (e.g. "SOL_TRANSFER").
+            // We only care if there are native transfers matching our criteria.
+            if (tx.nativeTransfers && Array.isArray(tx.nativeTransfers)) {
+                for (const transfer of tx.nativeTransfers) {
                     if (
                         transfer.fromUserAccount === TOKEN_CONFIG.creatorWallet &&
                         transfer.toUserAccount === TOKEN_CONFIG.donationWallet
