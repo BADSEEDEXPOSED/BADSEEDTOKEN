@@ -24,11 +24,7 @@ type Summary = {
     debug_progress?: string;
 };
 
-type Metrics = {
-    // ... existing types ...
-};
 
-// ... existing helpers ...
 
 // ... inside App component ...
 // Update the "Total Donated" card section
@@ -232,125 +228,14 @@ const App: React.FC = () => {
     };
 
     useEffect(() => {
-        const fetchLocalDev = async () => {
-            if (import.meta.env.DEV) {
-                console.log("DEV MODE: Fetching PumpSwap data directly...");
-                try {
-                    // Use local proxy to bypass CORS/403 (Must be absolute URL for Connection class)
-                    const rpc = window.location.origin + "/solana-rpc";
-                    const PROG_ID = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
-                    const MINT = "3HPpMLK7LjKFqSnCsBYNiijhNTo7dkkx3FCSAHKSpump"; // BADSEED Reality
+        // Unified Fetching: Always use the API (proxied in local dev)
+        // This ensures local dev sees EXACTLY what the production server sees.
+        fetchAll();
 
-                    console.log("Connecting to Solana...", MINT);
-                    const { Connection, PublicKey } = await import("@solana/web3.js");
-                    const conn = new Connection(rpc);
-                    const mintPub = new PublicKey(MINT);
-                    const progPub = new PublicKey(PROG_ID);
-                    const [pda] = PublicKey.findProgramAddressSync([Buffer.from("bonding-curve"), mintPub.toBuffer()], progPub);
+        const POLLING_INTERVAL = import.meta.env.DEV ? 2000 : 10000;
+        const interval = setInterval(fetchAll, POLLING_INTERVAL);
 
-                    console.log("PDA Derived:", pda.toBase58());
-                    const info = await conn.getAccountInfo(pda);
-
-                    if (info) {
-                        console.log("Data received, length:", info.data.length);
-                        const data = info.data;
-                        // Manual Decode
-                        const vTokenRaw = Number(data.readBigUInt64LE(8));
-                        const vSolRaw = Number(data.readBigUInt64LE(16));
-                        const rTokenRaw = Number(data.readBigUInt64LE(24));
-                        const rSolRaw = Number(data.readBigUInt64LE(32));
-                        const supplyRaw = Number(data.readBigUInt64LE(40));
-
-                        // Unit Conversions
-                        const vToken = vTokenRaw / 1e6; // Decimals: 6
-                        const vSol = vSolRaw / 1e9;     // Decimals: 9
-                        const rSol = rSolRaw / 1e9;     // Decimals: 9
-                        const supply = supplyRaw / 1e6; // Decimals: 6
-
-                        // Price (SOL per Token)
-                        const price = vSol / vToken;
-
-                        // Market Cap (SOL)
-                        const mcap = price * supply;
-
-                        // Progress Calculation (Deterministic Token-Based)
-                        const INIT_VTOKEN = 1073000000;
-                        const TARGET_SOLD = 800000000; // Approx amount sold to bond
-                        const tokensSold = INIT_VTOKEN - vToken;
-                        const progress = Math.min(1, Math.max(0, tokensSold / TARGET_SOLD));
-
-                        // Strict Pre-Launch Detection (vSol Ground Truth)
-                        const isPreLaunch = vSol < 30.05;
-
-                        setSummary({
-                            mint: MINT,
-                            symbol: "BADSEED",
-                            name: "BadSeed",
-                            creator_wallet: "9TyzcephhXEw67piYNc72EJtgVmbq3AZhyPFSvdfXWdr",
-                            donation_wallet: "CZ7Lv3QNVxbBivGPBhJG7m1HpCtfEDjEusBjjZ3qmVz5",
-                            price_sol: price,
-                            market_cap_sol: mcap,
-                            curve_progress: progress,
-                            total_fees_claimed_sol: 0,
-                            total_donated_sol: 0,
-                            pre_launch_donated_sol: 0,
-                            mode: isPreLaunch ? "pre-launch" : "pumpswap",
-                            last_updated: new Date().toISOString(),
-                            debug_price: `vSol (${vSol.toFixed(2)}) / vTokens (${(vToken / 1e6).toFixed(1)}M)`,
-                            debug_mcap: `Price * Supply (${(supply / 1e9).toFixed(1)}B)`,
-                            debug_progress: `Sold (${(tokensSold / 1e6).toFixed(1)}M) / Target (${(TARGET_SOLD / 1e6).toFixed(0)}M)`
-                        });
-                        setMetrics({
-                            price: [], market_cap: [], fees_claimed_cumulative: [], donations_cumulative: []
-                        });
-                    } else {
-                        console.warn("Account not found (Bonding curve missing) - Using Initial State");
-                        // Fallback: Initial State (Pre-Bonding)
-                        const INIT_VTOKEN = 1073000000;
-                        const INIT_VSOL = 30; // Pump.fun always starts with 30 SOL virtual liquidity
-                        const price = INIT_VSOL / INIT_VTOKEN;
-                        const supply = 1000000000; // 1B Total Supply
-                        const mcap = price * supply;
-
-                        setSummary({
-                            mint: MINT,
-                            symbol: "BADSEED",
-                            name: "BadSeed",
-                            creator_wallet: "9TyzcephhXEw67piYNc72EJtgVmbq3AZhyPFSvdfXWdr",
-                            donation_wallet: "CZ7Lv3QNVxbBivGPBhJG7m1HpCtfEDjEusBjjZ3qmVz5",
-                            price_sol: price,
-                            market_cap_sol: mcap,
-                            curve_progress: 0,
-                            total_fees_claimed_sol: 0,
-                            total_donated_sol: 0,
-                            pre_launch_donated_sol: 0,
-                            mode: "pre-launch",
-                            last_updated: new Date().toISOString(),
-                            debug_price: `vSol (${INIT_VSOL.toFixed(2)}) / vTokens (${(INIT_VTOKEN / 1e6).toFixed(1)}M)`,
-                            debug_mcap: `Price * Supply (${(supply / 1e9).toFixed(1)}B)`,
-                            debug_progress: `Sold (0.0M) / Target (800M)`
-                        });
-                    }
-                } catch (e) {
-                    console.error("Local fetch failed", e);
-                } finally {
-                    setLoading(false);
-                }
-            } else {
-                fetchAll();
-            }
-        };
-
-        if (import.meta.env.DEV) {
-            fetchLocalDev();
-            // Fast polling for volatile test token
-            const interval = setInterval(fetchLocalDev, 1000);
-            return () => clearInterval(interval);
-        } else {
-            fetchAll();
-            const interval = setInterval(fetchAll, 10_000);
-            return () => clearInterval(interval);
-        }
+        return () => clearInterval(interval);
     }, []);
 
 
