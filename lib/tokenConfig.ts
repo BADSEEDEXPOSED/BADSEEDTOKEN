@@ -8,12 +8,13 @@ export const TOKEN_CONFIG = {
     network: "mainnet-beta"
 };
 
-mode: `token:MODE_V2:${TOKEN_CONFIG.mint}`,
+export const redisKeys = {
+    mode: `token:MODE_V2:${TOKEN_CONFIG.mint}`,
     summary: `token:SUMMARY_V2:${TOKEN_CONFIG.mint}`,
-        tsPrice: `token:TS:PRICE_V2:${TOKEN_CONFIG.mint}`,
-            tsMcap: `token:TS:MCAP_V2:${TOKEN_CONFIG.mint}`,
-                tsFeesCum: `token:TS:FEES_CUM_V2:${TOKEN_CONFIG.mint}`,
-                    tsDonationsCum: `token:TS:DONATIONS_CUM_V2:${TOKEN_CONFIG.mint}`,
-                        claims: `token:CLAIMS_V2:${TOKEN_CONFIG.mint}`,
-                            donations: `token:DONATIONS_V2:${TOKEN_CONFIG.mint}`
+    tsPrice: `token:TS:PRICE_V2:${TOKEN_CONFIG.mint}`,
+    tsMcap: `token:TS:MCAP_V2:${TOKEN_CONFIG.mint}`,
+    tsFeesCum: `token:TS:FEES_CUM_V2:${TOKEN_CONFIG.mint}`,
+    tsDonationsCum: `token:TS:DONATIONS_CUM_V2:${TOKEN_CONFIG.mint}`,
+    claims: `token:CLAIMS_V2:${TOKEN_CONFIG.mint}`,
+    donations: `token:DONATIONS_V2:${TOKEN_CONFIG.mint}`
 };
