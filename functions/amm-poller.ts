@@ -128,8 +128,19 @@ export const handler: Handler = async () => {
     }
 
     // 3. Calculate Community Holdings
-    // Community = Total - (Dev + Donation + Burn)
-    const communityBalance = Math.max(0, totalSupply - devBalance - donationBalance - burnBalance);
+    // Community = Total - (Dev + Donation + Burn + BondingCurve)
+    // We must account for tokens locked in the Bonding Curve (unsold supply)
+    let curveBalance = 0;
+    try {
+        const pump = new PumpFunSDK(connection);
+        const curvePda = await pump.getBondingCurvePDA(new (await import("@solana/web3.js")).PublicKey(TOKEN_CONFIG.mint));
+        const { getTokenBalance } = await import("../lib/helius");
+        curveBalance = await getTokenBalance(curvePda.toBase58(), TOKEN_CONFIG.mint);
+    } catch (e) {
+        console.warn("Failed to fetch curve balance:", e);
+    }
+
+    const communityBalance = Math.max(0, totalSupply - devBalance - donationBalance - burnBalance - curveBalance);
 
     await redis.hmset(redisKeys.summary, {
         mint: TOKEN_CONFIG.mint,
