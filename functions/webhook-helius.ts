@@ -37,21 +37,36 @@ export const handler: Handler = async (event) => {
         let lastSignature = null;
 
         for (const tx of transactions) {
-            // BULLETPROOF MATH: We check accountData for net balance changes.
-            // This captures transfers, swaps, rug-pulls, and complex contract interactions.
+            let txSol = 0;
+
+            // STRATEGY 1: Balance Delta (Accurate)
             if (tx.accountData && Array.isArray(tx.accountData)) {
                 for (const accountEntry of tx.accountData) {
-                    if (accountEntry.account === TOKEN_CONFIG.donationWallet) {
-                        // nativeBalanceChange is the net change in lamports
-                        // We only care if money ARRIVED > 0
-                        if (accountEntry.nativeBalanceChange > 0) {
-                            const sol = accountEntry.nativeBalanceChange / 1e9;
-                            donatedDelta += sol;
-                            lastSignature = tx.signature;
-                            console.log(`Webhook detected Inflow: +${sol} SOL (Tx: ${tx.signature})`);
-                        }
+                    if (
+                        accountEntry.account === TOKEN_CONFIG.donationWallet &&
+                        accountEntry.nativeBalanceChange > 0
+                    ) {
+                        txSol += accountEntry.nativeBalanceChange / 1e9;
+                        console.log(`[Method:Delta] Detected +${txSol} SOL in ${tx.signature}`);
                     }
                 }
+            }
+
+            // STRATEGY 2: Native Transfers (Legacy Fallback)
+            // If Strategy 1 missed it (e.g. Helius data quirk), this usually catches simple sends.
+            if (txSol === 0 && tx.nativeTransfers && Array.isArray(tx.nativeTransfers)) {
+                for (const transfer of tx.nativeTransfers) {
+                    if (transfer.toUserAccount === TOKEN_CONFIG.donationWallet) {
+                        const amount = transfer.amount / 1e9;
+                        txSol += amount;
+                        console.log(`[Method:Legacy] Detected +${amount} SOL in ${tx.signature}`);
+                    }
+                }
+            }
+
+            if (txSol > 0) {
+                donatedDelta += txSol;
+                lastSignature = tx.signature;
             }
         }
 
