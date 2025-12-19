@@ -14,5 +14,5 @@ export const ENV = {
     HELIUS_API_KEY: requireEnv("HELIUS_API_KEY"),
     CREATOR_SECRET_KEY: requireEnv("CREATOR_SECRET_KEY"), // JSON array string of 64-byte secret key
     WEBHOOK_AUTH_TOKEN: process.env.WEBHOOK_AUTH_TOKEN || "superfancysecretbadseed", // Optional, with default
-    QUICKNODE_RPC_URL: process.env.QUICKNODE_RPC_URL || "" // Optional fallback RPC
+    QUICKNODE_RPC_URL: process.env.QUICKNODE_RPC_URL || "https://soft-ancient-leaf.solana-mainnet.quiknode.pro/491845835e98a8a73eec0601d9c3ec271e5c0537/" // User provided fallback RPC
 };

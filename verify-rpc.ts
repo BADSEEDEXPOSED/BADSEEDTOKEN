@@ -19,7 +19,8 @@ async function runVerification() {
 
     console.log("\n[2] Checking Fallback Configuration (QuickNode)...");
     if (ENV.QUICKNODE_RPC_URL) {
-        console.log("   ✅ QuickNode URL found in environment.");
+        console.log("   ✅ QuickNode URL found in environment (or using Hardcoded Default).");
+        console.log(`   URL: ${ENV.QUICKNODE_RPC_URL.substring(0, 30)}...`);
         console.log("   (To test fallback, manually break HELIUS_API_KEY in .env and rerun)");
     } else {
         console.log("   ⚠️ QuickNode URL NOT set. Fallback is inactive.");
