@@ -8,21 +8,50 @@ const HELIUS_RPC_URL = ENV.HELIUS_API_KEY
 import { Connection } from "@solana/web3.js";
 export const connection = new Connection(HELIUS_RPC_URL);
 
-/** Minimal JSON-RPC wrapper for Helius */
+/** Robust RPC wrapper with Multi-Provider Fallback */
 export async function heliusRpc<T = any>(method: string, params: any[]): Promise<T> {
-    const res = await fetch(HELIUS_RPC_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
-    });
-    if (!res.ok) {
-        throw new Error(`Helius RPC error: ${res.status} ${res.statusText}`);
+    const payload = { jsonrpc: "2.0", id: 1, method, params };
+
+    // Attempt 1: Helius (Primary)
+    try {
+        const res = await fetch(HELIUS_RPC_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            const json = await res.json();
+            if (!json.error) return json.result as T;
+            console.warn(`Helius JSON-RPC Error: ${JSON.stringify(json.error)}`);
+        } else {
+            console.warn(`Helius HTTP Error: ${res.status}`);
+        }
+    } catch (e) {
+        console.warn("Helius Connection Failed:", e);
     }
-    const json = await res.json();
-    if (json.error) {
-        throw new Error(`Helius RPC error: ${JSON.stringify(json.error)}`);
+
+    // Attempt 2: QuickNode (Fallback)
+    if (ENV.QUICKNODE_RPC_URL) {
+        console.log("Switching to QuickNode Fallback...");
+        try {
+            const res = await fetch(ENV.QUICKNODE_RPC_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) throw new Error(`QuickNode HTTP ${res.status}`);
+            const json = await res.json();
+            if (json.error) throw new Error(`QuickNode JSON-RPC Error: ${JSON.stringify(json.error)}`);
+
+            return json.result as T;
+        } catch (e) {
+            console.error("QuickNode Fallback Failed:", e);
+        }
     }
-    return json.result as T;
+
+    throw new Error("All RPC providers failed.");
 }
 
 /** Placeholder for Pump AMM metrics – returns zeros until real implementation */

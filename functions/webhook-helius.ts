@@ -1,15 +1,24 @@
-// functions/webhook-helius.ts
+import * as crypto from "crypto";
 import type { Handler } from "@netlify/functions";
 import { redis } from "@lib/redis";
 import { redisKeys, TOKEN_CONFIG } from "@lib/tokenConfig";
 import { ENV } from "@lib/env";
 
 export const handler: Handler = async (event) => {
-    // 1. Basic Security
-    const authHeader = event.headers["authorization"];
-    const expectedSecret = ENV.WEBHOOK_AUTH_TOKEN || "superfancysecretbadseed"; // User should set this in Netlify
+    // 1. Secure Authentication (Timing-Safe)
+    const authHeader = event.headers["authorization"] || "";
+    const expectedSecret = ENV.WEBHOOK_AUTH_TOKEN || "superfancysecretbadseed";
 
-    if (authHeader !== expectedSecret) {
+    const received = Buffer.from(authHeader);
+    const expected = Buffer.from(expectedSecret);
+
+    // Constant-time comparison to prevent timing attacks
+    let match = received.length === expected.length;
+    if (match) {
+        match = crypto.timingSafeEqual(received, expected);
+    }
+
+    if (!match) {
         console.warn("Unauthorized webhook attempt blocked.");
         return { statusCode: 401, body: "Unauthorized" };
     }
