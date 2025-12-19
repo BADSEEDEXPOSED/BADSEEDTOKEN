@@ -123,12 +123,15 @@ export const handler: Handler = async () => {
             getTokenBalance(BURN_ADDRESS, TOKEN_CONFIG.mint)
         ]);
 
+        // User Logic: Burnt tokens should reduce Total Supply
+        totalSupply = Math.max(0, totalSupply - burnBalance);
+
     } catch (e) {
         console.error("Proof of Reserves fetch fail:", e);
     }
 
     // 3. Calculate Community Holdings
-    // Community = Total - (Dev + Donation + Burn + BondingCurve)
+    // Community = Total - (Dev + Donation + BondingCurve)
     // We must account for tokens locked in the Bonding Curve (unsold supply)
     let curveBalance = 0;
     try {
@@ -140,7 +143,13 @@ export const handler: Handler = async () => {
         console.warn("Failed to fetch curve balance:", e);
     }
 
-    const communityBalance = Math.max(0, totalSupply - devBalance - donationBalance - burnBalance - curveBalance);
+    // Default Calculation
+    let communityBalance = Math.max(0, totalSupply - devBalance - donationBalance - curveBalance);
+
+    // Hard Override for Pre-Launch (Impossible to hold tokens)
+    if (mode === "pre-launch") {
+        communityBalance = 0;
+    }
 
     await redis.hmset(redisKeys.summary, {
         mint: TOKEN_CONFIG.mint,

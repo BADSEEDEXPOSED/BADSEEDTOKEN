@@ -41,11 +41,13 @@ export function ReservesHUD({ data }: Props) {
 
                 {/* 4. Burnt */}
                 <div className="hud-item" style={{ borderColor: "rgba(255,50,50,0.3)" }}>
-                    <span className="hud-label" style={{ color: "#ff6666" }}>BURNT 🔥</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <span className="hud-label" style={{ color: "#ff6666", marginBottom: 0 }}>BURNT 🔥</span>
+                        <span style={{ fontSize: '8px', opacity: 0.5, fontFamily: 'monospace', color: '#ff6666' }}>
+                            (1111...1111)
+                        </span>
+                    </div>
                     <span className="hud-value" style={{ color: "#ffcfcf" }}>{formatSupply(data.supply_burn)}</span>
-                    <span style={{ display: 'block', fontSize: '8px', opacity: 0.5, marginTop: '2px', fontFamily: 'monospace' }}>
-                        1111...1111
-                    </span>
                 </div>
             </div>
         </div>
