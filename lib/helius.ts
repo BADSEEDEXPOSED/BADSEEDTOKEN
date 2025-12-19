@@ -54,6 +54,36 @@ export async function heliusRpc<T = any>(method: string, params: any[]): Promise
     throw new Error("All RPC providers failed.");
 }
 
+/** Fetch Token Total Supply (Returns number of tokens) */
+export async function getTokenSupply(mint: string): Promise<number> {
+    try {
+        const result = await heliusRpc<{ value: { amount: string; decimals: number; uiAmount: number } }>("getTokenSupply", [mint]);
+        return result.value.uiAmount || 0;
+    } catch (e) {
+        console.warn(`Error fetching supply for ${mint}:`, e);
+        return 1000000000; // Fallback to 1B
+    }
+}
+
+/** Fetch Token Balance for a Specific Wallet (Returns number of tokens) */
+export async function getTokenBalance(wallet: string, mint: string): Promise<number> {
+    try {
+        const result = await heliusRpc<{ value: Array<{ account: { data: { parsed: { info: { tokenAmount: { uiAmount: number } } } } } }> }>("getTokenAccountsByOwner", [
+            wallet,
+            { mint: mint },
+            { encoding: "jsonParsed" }
+        ]);
+
+        if (result.value && result.value.length > 0) {
+            return result.value[0].account.data.parsed.info.tokenAmount.uiAmount || 0;
+        }
+        return 0;
+    } catch (e) {
+        console.warn(`Error fetching balance for ${wallet}:`, e);
+        return 0;
+    }
+}
+
 /** Placeholder for Pump AMM metrics – returns zeros until real implementation */
 export async function getPumpAmmMetrics() {
     return { priceSol: 0, marketCapSol: 0, curveProgress: 0 };

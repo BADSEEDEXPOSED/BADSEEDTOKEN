@@ -4,6 +4,7 @@ import { Buffer } from "buffer";
 // @ts-ignore
 window.Buffer = Buffer;
 import trailerVideo from "./assets/trailer.mp4";
+import { ReservesHUD } from "./components/ReservesHUD";
 
 type Summary = {
     mint: string;
@@ -22,6 +23,11 @@ type Summary = {
     debug_price?: string;
     debug_mcap?: string;
     debug_progress?: string;
+    supply_total: number;
+    supply_community: number;
+    supply_dev: number;
+    supply_donation: number;
+    supply_burn: number;
 };
 
 
@@ -342,6 +348,7 @@ const App: React.FC = () => {
 
                 <section className="video-section">
                     <div className="video-wrapper">
+                        <ReservesHUD data={summary} />
                         <video
                             className="video-player"
                             autoPlay

@@ -100,6 +100,37 @@ export const handler: Handler = async () => {
         debugProgress = `Bonding Complete`;
     }
 
+    // --- HOST PROOF OF RESERVES (Phase 6) ---
+    // Fetch real-time balances for transparency
+    let totalSupply = 1000000000;
+    let devBalance = 0;
+    let donationBalance = 0;
+    let burnBalance = 0;
+
+    try {
+        const { getTokenSupply, getTokenBalance } = await import("../lib/helius");
+
+        // 1. Fetch Supply
+        totalSupply = await getTokenSupply(TOKEN_CONFIG.mint);
+
+        // 2. Fetch Wallet Balances
+        // Note: These are light RPC calls (getTokenAccountsByOwner)
+        const BURN_ADDRESS = "11111111111111111111111111111111";
+
+        [devBalance, donationBalance, burnBalance] = await Promise.all([
+            getTokenBalance(TOKEN_CONFIG.creatorWallet, TOKEN_CONFIG.mint),
+            getTokenBalance(TOKEN_CONFIG.donationWallet, TOKEN_CONFIG.mint),
+            getTokenBalance(BURN_ADDRESS, TOKEN_CONFIG.mint)
+        ]);
+
+    } catch (e) {
+        console.error("Proof of Reserves fetch fail:", e);
+    }
+
+    // 3. Calculate Community Holdings
+    // Community = Total - (Dev + Donation + Burn)
+    const communityBalance = Math.max(0, totalSupply - devBalance - donationBalance - burnBalance);
+
     await redis.hmset(redisKeys.summary, {
         mint: TOKEN_CONFIG.mint,
         symbol: TOKEN_CONFIG.symbol,
@@ -111,9 +142,18 @@ export const handler: Handler = async () => {
         total_donated_sol: existingDonated.toString(),
         mode,
         last_updated: new Date(now).toISOString(),
+
+        // Debug strings for existing UI
         debug_price: debugPrice,
         debug_mcap: debugMcap,
-        debug_progress: debugProgress
+        debug_progress: debugProgress,
+
+        // PROOF OF RESERVES DATA
+        supply_total: totalSupply.toString(),
+        supply_community: communityBalance.toString(),
+        supply_dev: devBalance.toString(),
+        supply_donation: donationBalance.toString(),
+        supply_burn: burnBalance.toString()
     });
 
     const pricePoint = JSON.stringify({ t: now, price_sol: priceSol });
