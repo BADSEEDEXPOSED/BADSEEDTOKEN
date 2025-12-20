@@ -42,8 +42,15 @@ export const handler: Handler = async () => {
             supply_donation: parseFloat(summary.supply_donation || "0"),
             supply_burn: parseFloat(summary.supply_burn || "0"),
 
-            // Phase 8: Real-Time Ticker (Events)
-            recent_activity: await redis.lrange(`token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`, 0, 9)
+            // Phase 8: Real-Time Ticker (Events) - wrapped in try/catch
+            recent_activity: await (async () => {
+                try {
+                    return await redis.lrange(`token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`, 0, 9);
+                } catch (err) {
+                    console.error("Recent Activity Fetch Failed:", err);
+                    return [];
+                }
+            })()
         };
 
         return {

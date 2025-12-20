@@ -102,10 +102,10 @@ export const handler: Handler = async (event) => {
 
                             const msg = `${emoji} ${action}: ${absAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${TOKEN_CONFIG.symbol}`;
 
-                            // Push to Redis
-                            const key = `token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`;
-                            await redis.lpush(key, msg);
-                            await redis.ltrim(key, 0, 9);
+                            // Push to Redis (Temporarily Disabled for Debugging)
+                            // const key = `token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`;
+                            // await redis.lpush(key, msg);
+                            // await redis.ltrim(key, 0, 9);
 
                             console.log(`[Ticker] ${msg}`);
                         }

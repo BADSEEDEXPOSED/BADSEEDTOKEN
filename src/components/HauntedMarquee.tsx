@@ -46,14 +46,14 @@ export const HauntedMarquee: React.FC = () => {
             // 2. Phase In (Slowly)
             setOpacity(1);
 
-            // 3. Hold for 5 seconds
+            // 3. Hold for 8-12 seconds (Longer display)
             timeout = setTimeout(() => {
                 // 4. Phase Out
                 setOpacity(0);
 
-                // 5. Wait 2 seconds then restart
-                timeout = setTimeout(cycle, 2000);
-            }, 5000 + Math.random() * 2000); // Random hold time 5-7s
+                // 5. Wait 5 seconds then restart (Longer pause)
+                timeout = setTimeout(cycle, 5000);
+            }, 8000 + Math.random() * 4000);
         };
 
         // Start initial cycle
@@ -65,7 +65,7 @@ export const HauntedMarquee: React.FC = () => {
     return (
         <div style={{
             position: 'absolute',
-            top: '72px', // Fit in the gap between Top Panels (approx 60px) and Side Pillars (80px)
+            top: '45px', // Moved up "tiny bit more" from 55px
             left: 0,
             width: '100%',
             textAlign: 'center',

@@ -8,6 +8,7 @@ import { ReservesHUD } from "./components/ReservesHUD";
 import { BitQueryHUD } from "./components/BitQueryHUD";
 import { CommandCenterHUD } from "./components/CommandCenterHUD";
 import { HauntedMarquee } from "./components/HauntedMarquee";
+import { LocationFooter } from "./components/LocationFooter";
 
 type Summary = {
     mint: string;
@@ -400,6 +401,7 @@ const App: React.FC = () => {
                     </div>
                 </section>
                 <div className="spacer"></div>
+                <LocationFooter />
             </div>
         </>
     );
