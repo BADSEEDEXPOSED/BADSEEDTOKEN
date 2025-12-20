@@ -94,15 +94,13 @@ export class PumpFunSDK {
     }
 
     // Helper: Calculate Bonding Progress (0-100%)
-    // Uses Token Reserves for deterministic progress calculation
+    // "realTokenReserves" in the State struct tracks 'Tokens Left To Sell' (starts at 793M, ends at 0).
+    // It does NOT include the 206.9M reserved for liquidity migration.
     calculateProgress(state: BondingCurveState): number {
-        const vToken = Number(state.virtualTokenReserves) / 1e6;
+        const leftToSell = Number(state.realTokenReserves) / 1e6; // Decimals = 6
+        const INITIAL_SALE_SUPPLY = 793100000;
 
-        const INIT_VTOKEN = 1073000000;
-        const TARGET_SOLD = 800000000;
-
-        const tokensSold = INIT_VTOKEN - vToken;
-        const pct = (tokensSold / TARGET_SOLD) * 100;
+        const pct = 100 - ((leftToSell * 100) / INITIAL_SALE_SUPPLY);
 
         return Math.min(100, Math.max(0, pct));
     }

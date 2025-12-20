@@ -123,67 +123,85 @@ export const handler: Handler = async () => {
             getTokenBalance(BURN_ADDRESS, TOKEN_CONFIG.mint)
         ]);
 
-        // User Logic: Burnt tokens should reduce Total Supply
-        totalSupply = Math.max(0, totalSupply - burnBalance);
+        // 3. Calculate Community Holdings
+        // Community = (Tokens Sold) - (Dev + Donation + Burn)
+        // Tokens Sold = Initial Saleable (793.1M) - Tokens Left To Sell
 
+        const INITIAL_SALEABLE = 793100000;
+        const RESERVED_LIQ = 206900000;
+
+        let tokensLeftToSell = INITIAL_SALEABLE; // Default assumption: None sold yet
+
+        try {
+            const pump = new PumpFunSDK(connection);
+
+            // Priority 1: Get precise "Left To Sell" from On-Chain State
+            // Note: We might have already fetched 'state' above, but fetching again or passing it down is safer for autonomy
+            const state = await pump.getBondingCurveState(TOKEN_CONFIG.mint);
+
+            if (state) {
+                tokensLeftToSell = Number(state.realTokenReserves) / 1e6;
+            } else {
+                // Priority 2: Fallback to ATA Balance (Balance - Reserved)
+                const curvePda = await pump.getBondingCurvePDA(new (await import("@solana/web3.js")).PublicKey(TOKEN_CONFIG.mint));
+                const { getTokenBalance } = await import("../lib/helius");
+                const rawBalance = await getTokenBalance(curvePda.toBase58(), TOKEN_CONFIG.mint);
+
+                // rawBalance includes the 206.9M reserved tokens
+                tokensLeftToSell = Math.max(0, rawBalance - RESERVED_LIQ);
+            }
+        } catch (e) {
+            console.warn("Curve fetch warning:", e);
+        }
+
+        const tokensSold = Math.max(0, INITIAL_SALEABLE - tokensLeftToSell);
+        let communityBalance = Math.max(0, tokensSold - devBalance - donationBalance - burnBalance);
+
+        // Hard Override for Pre-Launch (Impossible to hold tokens)
+        if (mode === "pre-launch") {
+            communityBalance = 0;
+        }
+
+        await redis.hmset(redisKeys.summary, {
+            mint: TOKEN_CONFIG.mint,
+            symbol: TOKEN_CONFIG.symbol,
+            name: TOKEN_CONFIG.name,
+            price_sol: priceSol.toString(),
+            market_cap_sol: marketCapSol.toString(),
+            curve_progress: curveProgress.toString(),
+            total_fees_claimed_sol: existingFees.toString(),
+            total_donated_sol: existingDonated.toString(),
+            mode,
+            last_updated: new Date(now).toISOString(),
+
+            // Debug strings for existing UI
+            debug_price: debugPrice,
+            debug_mcap: debugMcap,
+            debug_progress: debugProgress,
+
+            // PROOF OF RESERVES DATA
+            supply_total: totalSupply.toString(),
+            supply_community: communityBalance.toString(),
+            supply_dev: devBalance.toString(),
+            supply_donation: donationBalance.toString(),
+            supply_burn: burnBalance.toString()
+        });
+
+        const pricePoint = JSON.stringify({ t: now, price_sol: priceSol });
+        const mcapPoint = JSON.stringify({ t: now, market_cap_sol: marketCapSol });
+
+        await redis.zadd(redisKeys.tsPrice, { score: now, member: pricePoint });
+        await redis.zadd(redisKeys.tsMcap, { score: now, member: mcapPoint });
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({ ok: true, mode, priceSol, marketCapSol, curveProgress })
+        };
     } catch (e) {
-        console.error("Proof of Reserves fetch fail:", e);
+        console.error("Error in AMM poller:", e);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ ok: false, error: (e as Error).message })
+        };
     }
-
-    // 3. Calculate Community Holdings
-    // Community = Total - (Dev + Donation + BondingCurve)
-    // We must account for tokens locked in the Bonding Curve (unsold supply)
-    let curveBalance = 0;
-    try {
-        const pump = new PumpFunSDK(connection);
-        const curvePda = await pump.getBondingCurvePDA(new (await import("@solana/web3.js")).PublicKey(TOKEN_CONFIG.mint));
-        const { getTokenBalance } = await import("../lib/helius");
-        curveBalance = await getTokenBalance(curvePda.toBase58(), TOKEN_CONFIG.mint);
-    } catch (e) {
-        console.warn("Failed to fetch curve balance:", e);
-    }
-
-    // Default Calculation
-    let communityBalance = Math.max(0, totalSupply - devBalance - donationBalance - curveBalance);
-
-    // Hard Override for Pre-Launch (Impossible to hold tokens)
-    if (mode === "pre-launch") {
-        communityBalance = 0;
-    }
-
-    await redis.hmset(redisKeys.summary, {
-        mint: TOKEN_CONFIG.mint,
-        symbol: TOKEN_CONFIG.symbol,
-        name: TOKEN_CONFIG.name,
-        price_sol: priceSol.toString(),
-        market_cap_sol: marketCapSol.toString(),
-        curve_progress: curveProgress.toString(),
-        total_fees_claimed_sol: existingFees.toString(),
-        total_donated_sol: existingDonated.toString(),
-        mode,
-        last_updated: new Date(now).toISOString(),
-
-        // Debug strings for existing UI
-        debug_price: debugPrice,
-        debug_mcap: debugMcap,
-        debug_progress: debugProgress,
-
-        // PROOF OF RESERVES DATA
-        supply_total: totalSupply.toString(),
-        supply_community: communityBalance.toString(),
-        supply_dev: devBalance.toString(),
-        supply_donation: donationBalance.toString(),
-        supply_burn: burnBalance.toString()
-    });
-
-    const pricePoint = JSON.stringify({ t: now, price_sol: priceSol });
-    const mcapPoint = JSON.stringify({ t: now, market_cap_sol: marketCapSol });
-
-    await redis.zadd(redisKeys.tsPrice, { score: now, member: pricePoint });
-    await redis.zadd(redisKeys.tsMcap, { score: now, member: mcapPoint });
-
-    return {
-        statusCode: 200,
-        body: JSON.stringify({ ok: true, mode, priceSol, marketCapSol, curveProgress })
-    };
 };
