@@ -5,6 +5,7 @@ import { Buffer } from "buffer";
 window.Buffer = Buffer;
 import trailerVideo from "./assets/trailer.mp4";
 import { ReservesHUD } from "./components/ReservesHUD";
+import { BitQueryHUD } from "./components/BitQueryHUD";
 
 type Summary = {
     mint: string;
@@ -349,6 +350,7 @@ const App: React.FC = () => {
                 <section className="video-section">
                     <div className="video-wrapper">
                         <ReservesHUD data={summary} />
+                        <BitQueryHUD />
                         <video
                             className="video-player"
                             autoPlay
