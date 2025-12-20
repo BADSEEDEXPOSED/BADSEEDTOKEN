@@ -221,7 +221,7 @@ const App: React.FC = () => {
                 sJson.debug_mcap = `Price * Supply (28.0 SOL)`;
             }
             if (!sJson.curve_progress) {
-                sJson.debug_progress = `Sold (0.0M) / Target (800M)`;
+                sJson.debug_progress = `Sold (0.0M) / Target (793.1M)`;
             }
 
             setSummary(sJson);
