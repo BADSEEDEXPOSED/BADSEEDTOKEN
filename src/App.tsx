@@ -124,6 +124,27 @@ function shorten(addr: string): string {
     return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
 }
 
+const LORE_PHRASES = [
+    "It's called BADSEED because it refused to stay hidden.\nIt does not cleanse the system.\nIt reveals how the system actually works — and what you are willing to accept once you see it.",
+    "There is no redemption here.\nBADSEED does not evolve into something better.\nIt remains visible, irreversible, and indifferent — mirroring the systems it exposes.",
+    "BADSEED is not planted.\nIt is revealed.\nParticipation is voluntary.\nObservation is not.\nOnce seen, nothing returns to plausible deniability.",
+    "BADSEED is not a movement or a belief.\nIt is a record.\nA ledger of choices made quietly, repeatedly, and without objection.",
+    "BADSEED does not bloom.\nIt commits.\nEvery interaction leaves a trace.\nEvery trace becomes permanent.",
+    "BADSEED is not an idea.\nIt is a condition created by visibility.\nNothing is forced.\nNothing is hidden.\nThe system continues.",
+    "They called it a bad seed because it refused to stay hidden.\nIt does not cleanse the system.\nIt reveals how the system actually works — and what you are willing to accept once you see it.",
+    "There is no redemption here.\nBADSEED does not evolve into something better.\nIt remains visible, irreversible, and indifferent — mirroring the systems it exposes.",
+    "BADSEED is not planted.\nIt is revealed.\nParticipation is voluntary.\nObservation is not.\nOnce seen, nothing returns to plausible deniability.",
+    "BADSEED is not a movement or a belief.\nIt is a record.\nA ledger of choices made quietly, repeatedly, and without objection.",
+    "BADSEED does not bloom.\nIt commits.\nEvery interaction leaves a trace.\nEvery trace becomes permanent.",
+    "BADSEED is not an idea.\nIt is a condition created by visibility.\nNothing is forced.\nNothing is hidden.\nThe system continues.",
+    "BADSEED exists where systems stop explaining themselves.\nWhat remains is procedure, repetition, and outcome.",
+    "BADSEED is activated by attention, not belief.\nWhether you agree is immaterial once you are present.",
+    "BADSEED does not reward insight.\nUnderstanding changes nothing about participation.",
+    "BADSEED has no edge and no center.\nIt appears wherever visibility replaces trust.",
+    "BADSEED does not corrupt the system.\nIt reveals the system exactly as it already is.",
+    "BADSEED is not remembered as an event.\nIt is remembered as the moment normal stopped feeling neutral."
+];
+
 const RotatingNotes: React.FC<{ mode: string }> = ({ mode }) => {
     const getMetricsNote = (m: string) => {
         if (m === "pre-launch") return "Metrics: System armed. Awaiting signal. The bonding curve is dormant until the first transaction ignites the protocol.";
@@ -131,10 +152,13 @@ const RotatingNotes: React.FC<{ mode: string }> = ({ mode }) => {
         return "Metrics: Bonding Curve active. Tracking trajectory towards the Raydium horizon. Every trade accelerates the migration event.";
     };
 
+    const [lore, setLore] = useState(LORE_PHRASES[0]);
+
+    // Notes Array - Index 2 is Dynamic Lore
     const NOTES = [
         "This dashboard tracks creator fees flowing from the BadSeed creator wallet to the donation wallet. As trades occur on Pump.fun / PumpSwap, creator fees accumulate and are forwarded to the Donation Wallet.",
         getMetricsNote(mode),
-        "The Lore: They buried us in the dirt and called us bad seeds. They forgot that dirt is where growth begins. We absorb the toxicity of the market and bloom into something pure.",
+        lore,
         "System: Real-time telemetry is engaged. Monitoring on-chain events with millisecond precision to ensure total transparency.",
         "Philosophy: In a garden of volatility, we plant stability. The user trades, the protocol builds."
     ];
@@ -146,16 +170,24 @@ const RotatingNotes: React.FC<{ mode: string }> = ({ mode }) => {
         const interval = setInterval(() => {
             setFadeState('out'); // Fade out (3s duration)
             setTimeout(() => {
-                setIndex((prev) => (prev + 1) % NOTES.length); // Change text after fade out + 1s delay
+                setIndex((prev) => {
+                    const next = (prev + 1) % NOTES.length;
+                    // If the next note is the Lore Note (Index 2), pick a random phrase
+                    if (next === 2) {
+                        const randomLore = LORE_PHRASES[Math.floor(Math.random() * LORE_PHRASES.length)];
+                        setLore(randomLore);
+                    }
+                    return next;
+                });
                 setFadeState('in'); // Fade in (3s duration)
             }, 4000); // 3s animation + 1s void
         }, 30000); // 30 seconds per note cycle
 
         return () => clearInterval(interval);
-    }, [NOTES.length]);
+    }, [NOTES.length]); // NOTES.length is constant (5)
 
     return (
-        <p className={`small muted fade-text ${fadeState}`} style={{ minHeight: '60px' }}>
+        <p className={`small muted fade-text ${fadeState}`} style={{ minHeight: '60px', whiteSpace: 'pre-line' }}>
             {NOTES[index]}
         </p>
     );
