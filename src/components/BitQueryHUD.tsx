@@ -9,39 +9,62 @@ type Candle = {
     v: number;
 };
 
-// Simple SVG Sparkline
+// Simple SVG Sparkline with Placeholder Support
 const Sparkline: React.FC<{ data: Candle[] }> = ({ data }) => {
-    if (!data || data.length === 0) return <div className="muted small">Waiting for market data...</div>;
-
     const width = 300;
     const height = 60;
+    const isEmpty = !data || data.length === 0;
+
+    // Placeholder Data: A flat line or subtle pulse
+    const renderData = isEmpty
+        ? Array.from({ length: 24 }, (_, i) => ({ c: 50 + Math.sin(i) * 2 })) // Subtle wave
+        : data;
 
     // Find min/max for scaling
-    const prices = data.map(d => d.c);
+    const prices = renderData.map(d => d.c);
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     const range = max - min || 1;
 
     // Create Path
-    const points = data.map((d, i) => {
-        const x = (i / (data.length - 1)) * width;
-        const y = height - ((d.c - min) / range) * height;
+    const points = renderData.map((d, i) => {
+        const x = (i / (renderData.length - 1)) * width;
+        const y = height - ((d.c - min) / range) * height; // Scale to fit
         return `${x},${y}`;
     }).join(' ');
 
-    const trendColor = (data[data.length - 1].c >= data[0].c) ? '#4ade80' : '#f87171';
+    const trendColor = isEmpty ? '#333' : (renderData[renderData.length - 1].c >= renderData[0].c) ? '#4ade80' : '#f87171';
+    const strokeWidth = isEmpty ? "1" : "2";
 
     return (
         <div style={{ position: 'relative', width: '100%', height: `${height}px` }}>
+            {isEmpty && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#444', fontSize: '10px', letterSpacing: '2px', textTransform: 'uppercase'
+                }}>
+                    Awaiting Market Data
+                </div>
+            )}
             <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-                <path d={`M ${points}`} fill="none" stroke={trendColor} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                {/* Background Grid Lines for Placeholder Feeling */}
+                {isEmpty && (
+                    <>
+                        <line x1="0" y1="20" x2="300" y2="20" stroke="#222" strokeWidth="1" strokeDasharray="4 4" />
+                        <line x1="0" y1="40" x2="300" y2="40" stroke="#222" strokeWidth="1" strokeDasharray="4 4" />
+                    </>
+                )}
+                <path d={`M ${points}`} fill="none" stroke={trendColor} strokeWidth={strokeWidth} vectorEffect="non-scaling-stroke" strokeDasharray={isEmpty ? "4 4" : ""} />
             </svg>
-            <div className="spark-info" style={{
-                position: 'absolute', top: 0, right: 0,
-                color: trendColor, fontSize: '10px', fontWeight: 'bold'
-            }}>
-                24H
-            </div>
+            {!isEmpty && (
+                <div className="spark-info" style={{
+                    position: 'absolute', top: 0, right: 0,
+                    color: trendColor, fontSize: '10px', fontWeight: 'bold'
+                }}>
+                    24H
+                </div>
+            )}
         </div>
     );
 };
@@ -73,6 +96,7 @@ const Ticker: React.FC<{ items?: string[] }> = ({ items }) => {
 
 export const BitQueryHUD: React.FC<{ recentActivity?: string[] }> = ({ recentActivity }) => {
     const [chartData, setChartData] = useState<Candle[]>([]);
+    // Default loading to TRUE, but we render Placeholder if loading is done and data is empty.
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
@@ -80,19 +104,15 @@ export const BitQueryHUD: React.FC<{ recentActivity?: string[] }> = ({ recentAct
             const res = await fetch('/.netlify/functions/bitquery-poller');
             if (res.status === 404) throw new Error("Local Dev - Function not found");
             const json = await res.json();
-            if (json.ok && json.chart) {
+            if (json.ok && json.chart && json.chart.length > 0) {
                 setChartData(json.chart);
-                setLoading(false);
+            } else {
+                setChartData([]); // Explicitly empty
             }
         } catch (e) {
-            console.warn("Using Demo Data (Dev Mode active or API not ready)");
-            // Keep Demo Chart for visuals if real API fails (or pre-launch)
-            // But Ticker is now controlled by props.
-            const mock = Array.from({ length: 24 }, (_, i) => ({
-                t: i.toString(),
-                o: 10 + i, h: 12 + i, l: 9 + i, c: 10 + i + (Math.random() * 5 - 2), v: 100
-            }));
-            setChartData(mock);
+            console.warn("API Error or Pre-Launch:", e);
+            setChartData([]); // Reset to empty on error (Placeholder Mode)
+        } finally {
             setLoading(false);
         }
     };
@@ -124,11 +144,8 @@ export const BitQueryHUD: React.FC<{ recentActivity?: string[] }> = ({ recentAct
         }}>
             <div style={{ flex: 1 }}>
                 <div className="label small muted" style={{ marginBottom: '8px' }}>MARKET TELEMETRY (24H)</div>
-                {loading ? (
-                    <div className="small muted">Initializing Satellite Link...</div>
-                ) : (
-                    <Sparkline data={chartData} />
-                )}
+                {/* Always render Sparkline now, it handles the Empty/Loading state internally */}
+                <Sparkline data={chartData} />
             </div>
 
             <div style={{ width: '1px', height: '40px', background: 'rgba(255,255,255,0.1)' }}></div>
