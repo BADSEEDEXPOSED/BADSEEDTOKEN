@@ -94,7 +94,7 @@ const Ticker: React.FC<{ items?: string[] }> = ({ items }) => {
     return <div className="small fade-text in" style={{ minHeight: '20px' }}>{msg}</div>;
 };
 
-export const BitQueryHUD: React.FC<{ recentActivity?: string[] }> = ({ recentActivity }) => {
+export const BitQueryHUD: React.FC<{ recentActivity?: string[]; style?: React.CSSProperties }> = ({ recentActivity, style }) => {
     const [chartData, setChartData] = useState<Candle[]>([]);
     // Default loading to TRUE, but we render Placeholder if loading is done and data is empty.
     const [loading, setLoading] = useState(true);
@@ -123,25 +123,27 @@ export const BitQueryHUD: React.FC<{ recentActivity?: string[] }> = ({ recentAct
         return () => clearInterval(interval);
     }, []);
 
+    const defaultStyle: React.CSSProperties = {
+        position: 'absolute',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '90%',
+        maxWidth: '600px',
+        background: 'rgba(0, 0, 0, 0.6)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        borderRadius: '3px',
+        padding: '12px 20px',
+        display: 'flex',
+        gap: '24px',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backdropFilter: 'blur(12px)',
+        zIndex: 20
+    };
+
     return (
-        <div className="hud-panel bitquery-panel" style={{
-            position: 'absolute',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '90%',
-            maxWidth: '600px',
-            background: 'rgba(0, 0, 0, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: '3px',
-            padding: '12px 20px',
-            display: 'flex',
-            gap: '24px',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backdropFilter: 'blur(12px)',
-            zIndex: 20
-        }}>
+        <div className="hud-panel bitquery-panel" style={{ ...defaultStyle, ...style }}>
             <div style={{ flex: 1 }}>
                 <div className="label small muted" style={{ marginBottom: '8px' }}>MARKET TELEMETRY (24H)</div>
                 {/* Always render Sparkline now, it handles the Empty/Loading state internally */}
