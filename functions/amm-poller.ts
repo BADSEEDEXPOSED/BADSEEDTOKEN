@@ -93,7 +93,8 @@ export const handler: Handler = async () => {
 
         debugPrice = `vSol (${vSolEst.toFixed(2)}) / vTokens (1073.0M)`; // Simplified for now
         debugMcap = `Price * Supply (${(marketCapSol).toFixed(1)} SOL)`; // Actually simpler to show SOL mcap
-        debugProgress = `Sold (${(curveProgress / 100 * 800).toFixed(1)}M) / Target (800M)`;
+        // Corrected Target based on Pump Program Constants (793.1M saleable)
+        debugProgress = `Sold (${(curveProgress / 100 * 793.1).toFixed(1)}M) / Target (793.1M)`;
     } else {
         debugPrice = `Raydium Pool Live`;
         debugMcap = `Price * Supply`;
