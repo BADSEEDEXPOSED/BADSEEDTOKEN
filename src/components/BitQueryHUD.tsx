@@ -46,45 +46,48 @@ const Sparkline: React.FC<{ data: Candle[] }> = ({ data }) => {
     );
 };
 
-// Simulated Ticker for "Live Feed" Visualization
-const Ticker: React.FC = () => {
-    const [msg, setMsg] = useState("Monitoring Event Stream...");
+// Ticker Component handling Real vs Standby phases
+const Ticker: React.FC<{ items?: string[] }> = ({ items }) => {
+    const [msg, setMsg] = useState("Initializing Feed...");
 
     useEffect(() => {
-        const MOCK_EVENTS = [
-            "🐋 Whale Buy: 15.2 SOL",
-            "🦐 Small Buy: 0.1 SOL",
-            "🔥 Tokens Burnt: 5,000 BAD",
-            "📊 Volume Spike Detected",
-            "💎 Diamond Hands: 84% Holding"
-        ];
+        // If we have real items, cycle them.
+        // If not (Pre-Launch), show system status.
+        const pool = (items && items.length > 0)
+            ? items
+            : ["System Armed", "Waiting for Launch Activity...", "Listening to Helius Stream"];
+
+        let idx = 0;
+        setMsg(pool[0]);
 
         const interval = setInterval(() => {
-            const randomMsg = MOCK_EVENTS[Math.floor(Math.random() * MOCK_EVENTS.length)];
-            setMsg(randomMsg);
-        }, 4000);
-        return () => clearInterval(interval);
-    }, []);
+            idx = (idx + 1) % pool.length;
+            setMsg(pool[idx]);
+        }, 3000);
 
-    return <div className="small fade-text in">{msg}</div>;
+        return () => clearInterval(interval);
+    }, [items]);
+
+    return <div className="small fade-text in" style={{ minHeight: '20px' }}>{msg}</div>;
 };
 
-export const BitQueryHUD: React.FC = () => {
+export const BitQueryHUD: React.FC<{ recentActivity?: string[] }> = ({ recentActivity }) => {
     const [chartData, setChartData] = useState<Candle[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
         try {
             const res = await fetch('/.netlify/functions/bitquery-poller');
-            if (res.status === 404) throw new Error("Local Dev - Function not found"); // Trigger Mock
+            if (res.status === 404) throw new Error("Local Dev - Function not found");
             const json = await res.json();
             if (json.ok && json.chart) {
                 setChartData(json.chart);
                 setLoading(false);
             }
         } catch (e) {
-            console.warn("Using Mock Data (Dev Mode)");
-            // Generate Fake Candle Data for Visualization
+            console.warn("Using Demo Data (Dev Mode active or API not ready)");
+            // Keep Demo Chart for visuals if real API fails (or pre-launch)
+            // But Ticker is now controlled by props.
             const mock = Array.from({ length: 24 }, (_, i) => ({
                 t: i.toString(),
                 o: 10 + i, h: 12 + i, l: 9 + i, c: 10 + i + (Math.random() * 5 - 2), v: 100
@@ -136,7 +139,7 @@ export const BitQueryHUD: React.FC = () => {
                     ● System Online
                 </div>
                 <div className="small muted" style={{ fontSize: '10px' }}>
-                    <Ticker />
+                    <Ticker items={recentActivity} />
                 </div>
             </div>
         </div>

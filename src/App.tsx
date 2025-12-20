@@ -29,6 +29,7 @@ type Summary = {
     supply_dev: number;
     supply_donation: number;
     supply_burn: number;
+    recent_activity?: string[];
 };
 
 
@@ -350,7 +351,7 @@ const App: React.FC = () => {
                 <section className="video-section">
                     <div className="video-wrapper">
                         <ReservesHUD data={summary} />
-                        <BitQueryHUD />
+                        <BitQueryHUD recentActivity={summary?.recent_activity} />
                         <video
                             className="video-player"
                             autoPlay

@@ -68,6 +68,28 @@ export const handler: Handler = async (event) => {
                 donatedDelta += txSol;
                 lastSignature = tx.signature;
             }
+
+            // STRATEGY 3: Real-Time Ticker (Capture Buys/Sells)
+            // If the webhook monitors the MINT address, we can see trades.
+            if (tx.tokenTransfers && Array.isArray(tx.tokenTransfers)) {
+                for (const transfer of tx.tokenTransfers) {
+                    if (transfer.mint === TOKEN_CONFIG.mint) {
+                        const amount = transfer.tokenAmount;
+                        // Better Ticker Event Generation
+                        let emoji = "📊";
+                        let action = "Transfer";
+                        if (amount > 1000000) { emoji = "🐋"; action = "Whale Move"; }
+                        else if (amount > 1000) { emoji = "💰"; action = "Trade"; }
+
+                        const msg = `${emoji} ${action}: ${amount.toLocaleString()} ${TOKEN_CONFIG.symbol}`;
+
+                        // Push to Redis List (Cap at 10 items)
+                        const key = `token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`;
+                        await redis.lpush(key, msg);
+                        await redis.ltrim(key, 0, 9);
+                    }
+                }
+            }
         }
 
         if (donatedDelta > 0) {
