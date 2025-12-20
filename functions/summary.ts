@@ -33,7 +33,7 @@ export const handler: Handler = async () => {
             last_updated: summary.last_updated || null,
             debug_price: summary.debug_price || `vSol (30.00) / vTokens (1073.0M)`,
             debug_mcap: summary.debug_mcap || `Price * Supply (28.0 SOL)`,
-            debug_progress: summary.debug_progress || `Sold (0.0M) / Target (800M)`,
+            debug_progress: summary.debug_progress || `Sold (0.0M) / Target (793.1M)`,
 
             // Proof of Reserves (Phase 6)
             supply_total: parseFloat(summary.supply_total || "1000000000"),
@@ -67,7 +67,7 @@ export const handler: Handler = async () => {
                 last_updated: null,
                 debug_price: "vSol (30.00) / vTokens (1073.0M)",
                 debug_mcap: "Price * Supply (28.0 SOL)",
-                debug_progress: "Sold (0.0M) / Target (800M)",
+                debug_progress: "Sold (0.0M) / Target (793.1M)",
                 supply_total: 1000000000,
                 supply_community: 0,
                 supply_dev: 0,
