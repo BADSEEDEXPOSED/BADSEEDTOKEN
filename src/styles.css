@@ -385,12 +385,15 @@ h1 {
 
 .hud-grid {
   display: grid;
+  /* Force exact equal columns */
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  width: 100%;
-  max-width: 900px;
-  /* Keep sections together */
-  margin: 0 auto;
+  /* Shift LEFT: Matches Left Pillar (10px pad + 10px margin = 20px) */
+  margin-left: 10px;
+  margin-right: auto;
+  /* Ensure it doesn't touch the right edge too closely/unevenly */
+  width: calc(100% - 40px);
+  max-width: none;
   align-items: start;
 }
 

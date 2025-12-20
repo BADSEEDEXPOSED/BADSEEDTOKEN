@@ -70,23 +70,45 @@ export const handler: Handler = async (event) => {
             }
 
             // STRATEGY 3: Real-Time Ticker (Capture Buys/Sells)
-            // If the webhook monitors the MINT address, we can see trades.
-            if (tx.tokenTransfers && Array.isArray(tx.tokenTransfers)) {
-                for (const transfer of tx.tokenTransfers) {
-                    if (transfer.mint === TOKEN_CONFIG.mint) {
-                        const amount = transfer.tokenAmount;
-                        // Better Ticker Event Generation
-                        let emoji = "📊";
-                        let action = "Transfer";
-                        if (amount > 1000000) { emoji = "🐋"; action = "Whale Move"; }
-                        else if (amount > 1000) { emoji = "💰"; action = "Trade"; }
+            // Enhanced Logic: Analyze Volume & Direction via AccountData
+            if (tx.accountData && Array.isArray(tx.accountData)) {
+                // Find the user who paid for the tx (likely the trader)
+                const trader = tx.accountData.find(a => a.account === tx.feePayer);
 
-                        const msg = `${emoji} ${action}: ${amount.toLocaleString()} ${TOKEN_CONFIG.symbol}`;
+                if (trader && trader.tokenBalanceChanges && Array.isArray(trader.tokenBalanceChanges)) {
+                    // Check if this trader traded OUR token
+                    const tokenChange = trader.tokenBalanceChanges.find(t => t.mint === TOKEN_CONFIG.mint);
 
-                        // Push to Redis List (Cap at 10 items)
-                        const key = `token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`;
-                        await redis.lpush(key, msg);
-                        await redis.ltrim(key, 0, 9);
+                    if (tokenChange) {
+                        const rawAmount = tokenChange.rawTokenAmount ? parseFloat(tokenChange.rawTokenAmount.tokenAmount) : 0;
+                        const decimals = tokenChange.rawTokenAmount ? tokenChange.rawTokenAmount.decimals : 6;
+                        const changeAmount = rawAmount / Math.pow(10, decimals);
+
+                        // Determine Direction
+                        // Positive Change = User Bought (Gained Tokens)
+                        // Negative Change = User Sold (Lost Tokens)
+                        const isBuy = changeAmount > 0;
+                        const absAmount = Math.abs(changeAmount);
+
+                        if (absAmount > 0) {
+                            let emoji = isBuy ? "🟢" : "🔴";
+                            let action = isBuy ? "Buy" : "Sell";
+
+                            // Whale Alert (>1M Tokens)
+                            if (absAmount > 1000000) {
+                                emoji = isBuy ? "🐳" : "🦈";
+                                action = isBuy ? "Whale Buy" : "Whale Dump";
+                            }
+
+                            const msg = `${emoji} ${action}: ${absAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${TOKEN_CONFIG.symbol}`;
+
+                            // Push to Redis
+                            const key = `token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`;
+                            await redis.lpush(key, msg);
+                            await redis.ltrim(key, 0, 9);
+
+                            console.log(`[Ticker] ${msg}`);
+                        }
                     }
                 }
             }

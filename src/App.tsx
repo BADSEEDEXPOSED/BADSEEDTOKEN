@@ -6,6 +6,7 @@ window.Buffer = Buffer;
 import trailerVideo from "./assets/trailer.mp4";
 import { ReservesHUD } from "./components/ReservesHUD";
 import { BitQueryHUD } from "./components/BitQueryHUD";
+import { CommandCenterHUD } from "./components/CommandCenterHUD";
 
 type Summary = {
     mint: string;
@@ -351,7 +352,7 @@ const App: React.FC = () => {
                 <section className="video-section">
                     <div className="video-wrapper">
                         <ReservesHUD data={summary} />
-                        <BitQueryHUD recentActivity={summary?.recent_activity} />
+                        <CommandCenterHUD recentActivity={summary?.recent_activity} mode={summary?.mode} />
                         <video
                             className="video-player"
                             autoPlay
