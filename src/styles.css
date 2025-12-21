@@ -475,13 +475,77 @@ h1 {
 @media (max-width: 768px) {
   .video-section {
     margin-top: 0;
-    /* Ensure video hits top or stays clean */
+    order: 1;
+    /* Video First */
   }
 
   .immersive-container {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+  }
+
+  /* Order of direct children of immersive-container */
+  .hud-container {
+    /* Reserves HUD */
+    position: relative !important;
+    order: 2;
+    width: 100% !important;
+    margin-left: 0 !important;
+    left: auto !important;
+    top: auto !important;
+  }
+
+  .hud-grid {
+    /* Reset grid logic for mobile flow */
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .command-center-hud {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    order: 3;
+    /* Below Reserves */
+    width: 100%;
+  }
+
+  /* Marquee at the very bottom */
+  .marquee-container {
+    position: relative !important;
+    top: auto !important;
+    bottom: auto !important;
+    order: 4;
+    /* Last */
+    width: 100% !important;
+    margin-top: 10px;
+  }
+
+  /* BitQuery Panel - Move below pillars */
+  .bitquery-hud {
+    width: 100% !important;
+    max-width: 100% !important;
+    order: 5;
+  }
+
+  /* Target div with specific background that likely represents BitQuery HUD */
+  .command-center-hud>div:not(.side-pillar) {
+    order: 10;
+    /* Force BitQuery (non-pillar) to bottom of this group */
+    width: 100% !important;
+    max-width: 100% !important;
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
+    /* Remove center transform if any */
+    margin: 0 !important;
   }
 
   .side-pillar {
@@ -502,6 +566,8 @@ h1 {
     gap: 12px;
     overflow-x: auto;
     /* Allow Scroll if extremely small */
+    order: 1;
+    /* Pillars First */
   }
 
   .side-pillar .label {
@@ -529,6 +595,7 @@ h1 {
     justify-content: space-between;
     width: 100%;
     gap: 8px;
+    padding-right: 4px;
   }
 
   /* Adjust stat rows inside horizontal layout */
@@ -549,7 +616,7 @@ h1 {
   /* Specific overrides for bars inside pillar */
   .pillar-content>div>div[style*="width: 100%"] {
     /* This targets the progress bars wrapper */
-    width: 80px !important;
+    width: 60px !important;
     /* Smaller bar width on mobile */
   }
 }

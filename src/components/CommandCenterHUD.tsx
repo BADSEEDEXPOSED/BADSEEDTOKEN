@@ -79,7 +79,7 @@ export const CommandCenterHUD: React.FC<{ recentActivity?: string[]; mode?: stri
     const txCount = recentActivity?.length || 0;
 
     return (
-        <>
+        <div className="command-center-hud">
             {/* Left Pillar: Market Stats */}
             <SidePillar title="Telemetry" align="left" active={isActive}>
                 {/* We don't have Pump.fun volume yet, so keep these as placeholders or hook up to summary logic later */}
@@ -119,6 +119,6 @@ export const CommandCenterHUD: React.FC<{ recentActivity?: string[]; mode?: stri
                     <span className="small muted" style={{ fontSize: '8px' }}>REAL-TIME STREAM</span>
                 </div>
             </SidePillar>
-        </>
+        </div>
     );
 };
