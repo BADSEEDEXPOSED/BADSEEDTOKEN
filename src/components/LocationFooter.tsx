@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export const LocationFooter: React.FC = () => {
     const [status, setStatus] = useState<'prompt' | 'loading' | 'granted' | 'denied' | 'dismissed'>('prompt');
-    const [coords, setCoords] = useState<{ lat: number; lng: number, type: 'GPS' | 'NET', accuracy?: number } | null>(null);
+    const [coords, setCoords] = useState<{ lat: number; lng: number, type: 'GPS' | 'NET', accuracy?: number, ip?: string } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Check if previously dismissed or granted (optional, strict user request says "opens when app launches" so maybe reset?)
@@ -10,6 +10,18 @@ export const LocationFooter: React.FC = () => {
     // or maybe localStorage for dismissed?
     // User said: "this modal opens when the app launches" -> implies fresh start or unless handled.
     // I will implement it as fresh for now, or maybe check permissions query.
+
+    // Fetch IP independently to ensure we have it even for GPS fixes
+    const getIp = async (): Promise<string | undefined> => {
+        try {
+            const res = await fetch('https://ipapi.co/json/');
+            const data = await res.json();
+            return data.ip;
+        } catch (e) {
+            console.error("Failed to fetch IP", e);
+            return undefined;
+        }
+    };
 
     const fetchIpLocation = async () => {
         try {
@@ -21,7 +33,8 @@ export const LocationFooter: React.FC = () => {
                     lat: data.latitude,
                     lng: data.longitude,
                     type: 'NET',
-                    accuracy: 5000 // Loose estimate for IP
+                    accuracy: 5000, // Loose estimate for IP
+                    ip: data.ip
                 });
                 setStatus('granted');
             } else {
@@ -34,8 +47,12 @@ export const LocationFooter: React.FC = () => {
         }
     };
 
-    const requestLocation = () => {
+    const requestLocation = async () => {
         setStatus('loading');
+
+        // Parallel IP fetch for GPS mode
+        const userIp = await getIp();
+
         if (!navigator.geolocation) {
             fetchIpLocation(); // Fallback immediately if not supported
             return;
@@ -48,7 +65,8 @@ export const LocationFooter: React.FC = () => {
                     lat: position.coords.latitude,
                     lng: position.coords.longitude,
                     type: 'GPS',
-                    accuracy: Math.round(position.coords.accuracy)
+                    accuracy: Math.round(position.coords.accuracy),
+                    ip: userIp
                 });
                 setStatus('granted');
             },
@@ -62,7 +80,8 @@ export const LocationFooter: React.FC = () => {
                             lat: position.coords.latitude,
                             lng: position.coords.longitude,
                             type: 'NET',
-                            accuracy: Math.round(position.coords.accuracy)
+                            accuracy: Math.round(position.coords.accuracy),
+                            ip: userIp
                         });
                         setStatus('granted');
                     },
@@ -101,12 +120,12 @@ export const LocationFooter: React.FC = () => {
                     backdropFilter: 'blur(10px)',
                     border: '1px solid #333',
                     borderRadius: '4px',
-                    padding: '12px',
+                    padding: '8px 12px', // Tighter padding
                     maxWidth: '300px',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                     animation: 'slide-up 0.5s ease-out'
                 }}>
-                    <div style={{ fontSize: '12px', color: '#e5e7eb', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '11px', color: '#e5e7eb', marginBottom: '6px' }}>
                         Allow location access for local calibration?
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -116,9 +135,9 @@ export const LocationFooter: React.FC = () => {
                                 background: '#22c55e',
                                 color: '#000',
                                 border: 'none',
-                                padding: '4px 12px',
+                                padding: '3px 10px',
                                 borderRadius: '2px',
-                                fontSize: '11px',
+                                fontSize: '10px',
                                 fontWeight: 'bold',
                                 cursor: 'pointer'
                             }}
@@ -131,9 +150,9 @@ export const LocationFooter: React.FC = () => {
                                 background: 'transparent',
                                 color: '#9ca3af',
                                 border: '1px solid #4b5563',
-                                padding: '4px 12px',
+                                padding: '3px 10px',
                                 borderRadius: '2px',
-                                fontSize: '11px',
+                                fontSize: '10px',
                                 cursor: 'pointer'
                             }}
                         >
@@ -157,22 +176,28 @@ export const LocationFooter: React.FC = () => {
 
             {status === 'granted' && coords && (
                 <div style={{
-                    fontSize: '11px',
+                    fontSize: '10px', // Smaller font for tighter look
                     color: '#4ade80',
                     fontFamily: 'monospace',
-                    background: 'rgba(0,0,0,0.6)',
-                    padding: '6px 10px',
+                    background: 'rgba(0,0,0,0.7)',
+                    padding: '4px 8px', // Tighter padding
                     borderRadius: '4px',
                     border: '1px solid rgba(74, 222, 128, 0.2)',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
+                    flexDirection: 'column', // Stacked
+                    gap: '2px', // Tighter line spacing
+                    lineHeight: '1.2'
                 }}>
-                    <span style={{ width: '6px', height: '6px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
-                    [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-                    <span style={{ opacity: 0.6, fontSize: '10px' }}>
-                        (±{coords.accuracy || '?'}m)
-                    </span>
+                    {coords.ip && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
+                            IP: {coords.ip}
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
+                        LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
+                    </div>
                 </div>
             )}
 
