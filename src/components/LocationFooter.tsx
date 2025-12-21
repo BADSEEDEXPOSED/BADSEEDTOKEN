@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 export const LocationFooter: React.FC = () => {
     const [status, setStatus] = useState<'prompt' | 'loading' | 'granted' | 'denied' | 'dismissed'>('prompt');
-    const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [coords, setCoords] = useState<{ lat: number; lng: number, type: 'GPS' | 'NET', accuracy?: number } | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Check if previously dismissed or granted (optional, strict user request says "opens when app launches" so maybe reset?)
@@ -11,38 +11,70 @@ export const LocationFooter: React.FC = () => {
     // User said: "this modal opens when the app launches" -> implies fresh start or unless handled.
     // I will implement it as fresh for now, or maybe check permissions query.
 
+    const fetchIpLocation = async () => {
+        try {
+            const res = await fetch('https://ipapi.co/json/');
+            if (!res.ok) throw new Error("IP API Failed");
+            const data = await res.json();
+            if (data.latitude && data.longitude) {
+                setCoords({
+                    lat: data.latitude,
+                    lng: data.longitude,
+                    type: 'NET',
+                    accuracy: 5000 // Loose estimate for IP
+                });
+                setStatus('granted');
+            } else {
+                throw new Error("Invalid IP Data");
+            }
+        } catch (err) {
+            console.error("IP Fallback Failed:", err);
+            setError("NO SIGNAL (FALLBACK FAILED)");
+            setStatus('denied');
+        }
+    };
+
     const requestLocation = () => {
         setStatus('loading');
         if (!navigator.geolocation) {
-            setError("Geolocation not supported");
-            setStatus('denied');
+            fetchIpLocation(); // Fallback immediately if not supported
             return;
         }
 
+        // Try 1: High Accuracy
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 setCoords({
                     lat: position.coords.latitude,
-                    lng: position.coords.longitude
+                    lng: position.coords.longitude,
+                    type: 'GPS',
+                    accuracy: Math.round(position.coords.accuracy)
                 });
                 setStatus('granted');
             },
-            (err) => {
-                console.error("Geo Error:", err);
-                // Map common error codes to user-friendly messages
-                let msg = "NO SIGNAL";
-                if (err.code === 1) msg = "PERM DENIED";
-                else if (err.code === 2) msg = "UNAVAILABLE";
-                else if (err.code === 3) msg = "TIMEOUT";
+            (errHigh) => {
+                console.warn("High Accuracy Failed:", errHigh);
 
-                setError(`${msg} (${err.code})`);
-                setStatus('denied');
+                // Try 2: Low Accuracy
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        setCoords({
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                            type: 'NET',
+                            accuracy: Math.round(position.coords.accuracy)
+                        });
+                        setStatus('granted');
+                    },
+                    (errLow) => {
+                        console.warn("Low Accuracy Failed:", errLow);
+                        // Try 3: IP Fallback
+                        fetchIpLocation();
+                    },
+                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
+                );
             },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     };
 
@@ -119,7 +151,7 @@ export const LocationFooter: React.FC = () => {
                     padding: '4px 8px',
                     borderRadius: '4px'
                 }}>
-                    Acquiring signal...
+                    Triangulating signal...
                 </div>
             )}
 
@@ -137,7 +169,10 @@ export const LocationFooter: React.FC = () => {
                     gap: '6px'
                 }}>
                     <span style={{ width: '6px', height: '6px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
-                    LOC: {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+                    [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
+                    <span style={{ opacity: 0.6, fontSize: '10px' }}>
+                        (±{coords.accuracy || '?'}m)
+                    </span>
                 </div>
             )}
 
@@ -147,9 +182,26 @@ export const LocationFooter: React.FC = () => {
                     color: '#f87171',
                     background: 'rgba(0,0,0,0.6)',
                     padding: '4px 8px',
-                    borderRadius: '4px'
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
                 }}>
-                    {error || "NO SIGNAL"}
+                    <span>{error || "NO SIGNAL"}</span>
+                    <button
+                        onClick={() => { setStatus('prompt'); requestLocation(); }} // Quick retry logic
+                        style={{
+                            background: 'transparent',
+                            border: '1px solid #f87171',
+                            color: '#f87171',
+                            fontSize: '9px',
+                            cursor: 'pointer',
+                            padding: '2px'
+                        }}
+                    >
+                        RETRY
+                    </button>
                 </div>
             )}
         </div>
