@@ -9,6 +9,7 @@ import { BitQueryHUD } from "./components/BitQueryHUD";
 import { CommandCenterHUD } from "./components/CommandCenterHUD";
 import { HauntedMarquee } from "./components/HauntedMarquee";
 import { LocationFooter } from "./components/LocationFooter";
+import { ScrollToTop } from "./components/ScrollToTop";
 
 type Summary = {
     mint: string;
@@ -405,6 +406,7 @@ const App: React.FC = () => {
                 </section>
                 <div className="spacer"></div>
                 <LocationFooter />
+                <ScrollToTop />
             </div>
         </>
     );
