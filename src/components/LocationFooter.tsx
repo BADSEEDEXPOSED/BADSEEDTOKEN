@@ -1,15 +1,84 @@
 import React, { useState, useEffect } from 'react';
 
+const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS' | 'NET', accuracy?: number, ip?: string } }> = ({ coords }) => {
+    // Blacklist Logic
+    const isBlacklistedIp = coords.ip === '184.65.126.30';
+    // Tolerance of ~0.05 degrees (approx 5km)
+    const isBlacklistedLoc = Math.abs(coords.lat - 49.0424) < 0.05 && Math.abs(coords.lng - (-122.2840)) < 0.05;
+    const isBlacklisted = isBlacklistedIp || isBlacklistedLoc;
+
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        if (isBlacklisted) {
+            setVisible(true); // Show immediately if blacklisted (to be blurred)
+            return;
+        }
+        // Non-blacklisted: Wait 30 seconds before showing
+        const timer = setTimeout(() => setVisible(true), 30000);
+        return () => clearTimeout(timer);
+    }, [isBlacklisted]);
+
+    if (!visible) return null;
+
+    return (
+        <div style={{
+            fontSize: '10px',
+            color: '#4ade80',
+            fontFamily: 'monospace',
+            background: 'rgba(0,0,0,0.7)',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            border: '1px solid rgba(74, 222, 128, 0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            lineHeight: '1.2',
+            letterSpacing: '-0.5px',
+            filter: isBlacklisted ? 'blur(4px)' : 'none',
+            userSelect: isBlacklisted ? 'none' : 'auto',
+            pointerEvents: isBlacklisted ? 'none' : 'auto'
+        }}>
+            {!isBlacklisted ? (
+                <a
+                    href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                >
+                    {coords.ip && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
+                            IP: {coords.ip}
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
+                        LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
+                    </div>
+                </a>
+            ) : (
+                <>
+                    {coords.ip && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
+                            IP: {coords.ip}
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
+                        LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
 export const LocationFooter: React.FC = () => {
     const [status, setStatus] = useState<'prompt' | 'loading' | 'granted' | 'denied' | 'dismissed'>('prompt');
     const [coords, setCoords] = useState<{ lat: number; lng: number, type: 'GPS' | 'NET', accuracy?: number, ip?: string } | null>(null);
     const [error, setError] = useState<string | null>(null);
-
-    // Check if previously dismissed or granted (optional, strict user request says "opens when app launches" so maybe reset?)
-    // But good UX usually remembers. I'll stick to non-persistent for "opens when app launches" strictly, 
-    // or maybe localStorage for dismissed?
-    // User said: "this modal opens when the app launches" -> implies fresh start or unless handled.
-    // I will implement it as fresh for now, or maybe check permissions query.
 
     // Fetch IP independently to ensure we have it even for GPS fixes
     const getIp = async (): Promise<string | undefined> => {
@@ -126,7 +195,7 @@ export const LocationFooter: React.FC = () => {
                     animation: 'slide-up 0.5s ease-out'
                 }}>
                     <div style={{ fontSize: '11px', color: '#e5e7eb', marginBottom: '6px' }}>
-                        Allow location access for local calibration?
+                        Allow access calibration?
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button
@@ -175,30 +244,7 @@ export const LocationFooter: React.FC = () => {
             )}
 
             {status === 'granted' && coords && (
-                <div style={{
-                    fontSize: '10px', // Smaller font for tighter look
-                    color: '#4ade80',
-                    fontFamily: 'monospace',
-                    background: 'rgba(0,0,0,0.7)',
-                    padding: '4px 8px', // Tighter padding
-                    borderRadius: '4px',
-                    border: '1px solid rgba(74, 222, 128, 0.2)',
-                    display: 'flex',
-                    flexDirection: 'column', // Stacked
-                    gap: '2px', // Tighter line spacing
-                    lineHeight: '1.2'
-                }}>
-                    {coords.ip && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
-                            IP: {coords.ip}
-                        </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
-                        LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
-                    </div>
-                </div>
+                <LocationDisplay coords={coords} />
             )}
 
             {status === 'denied' && (

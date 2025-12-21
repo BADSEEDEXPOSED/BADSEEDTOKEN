@@ -1,33 +1,20 @@
 import React from 'react';
 import { BitQueryHUD } from './BitQueryHUD';
 
-// A "Vertical Pillar" container for side stats
 const SidePillar: React.FC<{
     title: string;
     children: React.ReactNode;
     align: 'left' | 'right';
     active: boolean;
 }> = ({ title, children, align, active }) => (
-    <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        [align]: '20px',
-        width: '140px', // AGGRESSIVE REDUCTION from 300->240->180->140px
-        top: '20px', // Stretch to FULL HEIGHT
-        marginTop: '60px', // Leave space for Header
-        background: 'rgba(0, 0, 0, 0.6)',
-        border: `1px solid ${active ? '#4ade80' : 'rgba(255, 255, 255, 0.15)'}`, // Glow Green if Active
-        boxShadow: active ? '0 0 10px rgba(74, 222, 128, 0.2)' : 'none', // Subtle glow if active
-        borderRadius: '3px',
-        padding: '16px 12px',
-        backdropFilter: 'blur(12px)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        zIndex: 25,
-        pointerEvents: 'auto',
-        transition: 'all 0.5s ease'
-    }}>
+    <div
+        className={`side-pillar ${align} ${active ? 'active' : ''}`}
+        style={{
+            // Keep specific positioning inline or let CSS handle via classes .left/.right? 
+            // CSS classes are better for responsive overrides.
+            // I'll define .side-pillar.left and .side-pillar.right in CSS.
+        }}
+    >
         <div className="label small muted" style={{
             textTransform: 'uppercase',
             borderBottom: '1px solid rgba(255,255,255,0.1)',
@@ -41,10 +28,10 @@ const SidePillar: React.FC<{
         </div>
 
         {/* Content Container */}
-        <div style={{
+        <div className="pillar-content" style={{
             flex: 1,
             display: 'flex',
-            flexDirection: 'column',
+            // flexDirection handled in CSS for responsive layout
             gap: '12px'
         }}>
             {children}

@@ -383,22 +383,25 @@ const App: React.FC = () => {
                     <RotatingNotes mode={summary.mode} />
                 </section>
 
-                <section className="video-section">
-                    <div className="video-wrapper">
-                        <ReservesHUD data={summary} />
-                        <HauntedMarquee />
-                        <CommandCenterHUD recentActivity={summary?.recent_activity} mode={summary?.mode} />
-                        <video
-                            className="video-player"
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            style={{ objectFit: 'cover' }}
-                        >
-                            <source src={trailerVideo} type="video/mp4" />
-                        </video>
+                <section className="immersive-container" style={{ position: 'relative' }}>
+                    <div className="video-section">
+                        <div className="video-wrapper">
+                            <video
+                                className="video-player"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                style={{ objectFit: 'cover' }}
+                            >
+                                <source src={trailerVideo} type="video/mp4" />
+                            </video>
+                        </div>
                     </div>
+                    {/* Overlays / Siblings */}
+                    <ReservesHUD data={summary} />
+                    <HauntedMarquee />
+                    <CommandCenterHUD recentActivity={summary?.recent_activity} mode={summary?.mode} />
                 </section>
                 <div className="spacer"></div>
                 <LocationFooter />

@@ -431,3 +431,125 @@ h1 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Mobile Layout Refactor */
+.side-pillar {
+  position: absolute;
+  bottom: 20px;
+  width: 140px;
+  top: 20px;
+  margin-top: 60px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  padding: 16px 12px;
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 25;
+  pointer-events: auto;
+  transition: all 0.5s ease;
+}
+
+.pillar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.side-pillar.active {
+  border-color: #4ade80;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.2);
+}
+
+.side-pillar.left {
+  left: 20px;
+}
+
+.side-pillar.right {
+  right: 20px;
+}
+
+/* Mobile Overrides (< 768px for iPad Mini/Mobile) */
+@media (max-width: 768px) {
+  .video-section {
+    margin-top: 0;
+    /* Ensure video hits top or stays clean */
+  }
+
+  .immersive-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .side-pillar {
+    position: relative !important;
+    top: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    margin-top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+
+    display: flex;
+    flex-direction: row;
+    /* Horizontal Layout */
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    overflow-x: auto;
+    /* Allow Scroll if extremely small */
+  }
+
+  .side-pillar .label {
+    border-bottom: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0 !important;
+    padding-right: 12px;
+    margin-bottom: 0 !important;
+    white-space: nowrap;
+    width: 80px;
+    /* Fixed width label */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-width: 80px;
+  }
+
+  .pillar-content {
+    flex-direction: row;
+    /* Horizontal Content */
+    flex-wrap: wrap;
+    /* Wrap if too many stats */
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+
+  /* Adjust stat rows inside horizontal layout */
+  .pillar-content>div {
+    margin-bottom: 0 !important;
+    display: flex;
+    flex-direction: row !important;
+    /* Label + Value side-by-side */
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pillar-content>div .small.muted {
+    font-size: 9px !important;
+    opacity: 0.7;
+  }
+
+  /* Specific overrides for bars inside pillar */
+  .pillar-content>div>div[style*="width: 100%"] {
+    /* This targets the progress bars wrapper */
+    width: 80px !important;
+    /* Smaller bar width on mobile */
+  }
+}
