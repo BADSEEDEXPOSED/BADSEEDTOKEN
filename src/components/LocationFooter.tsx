@@ -40,12 +40,10 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
             }).catch(err => console.error("Logging failed", err));
         }
 
-        // Non-blacklisted: Wait 30 seconds before showing
+        // Non-blacklisted: Wait 30 seconds before showing MAP
         const timer = setTimeout(() => setVisible(true), 30000);
         return () => clearTimeout(timer);
     }, [isBlacklisted, coords, logged]);
-
-    if (!visible) return null;
 
     return (
         <div style={{
@@ -65,20 +63,23 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
             userSelect: isBlacklisted ? 'none' : 'auto',
             pointerEvents: isBlacklisted ? 'none' : 'auto'
         }}>
-            {!isBlacklisted ? (
-                <>
-                    {/* View Logs Link */}
-                    <div style={{ marginBottom: '2px', borderBottom: '1px dashed #4ade80', paddingBottom: '2px' }}>
-                        <a
-                            href="/.netlify/functions/view-logs"
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: 'bold' }}
-                        >
-                            [VIEW LOGS]
-                        </a>
-                    </div>
+            {!isBlacklisted && (
+                /* View Logs Link - Always visible once granted */
+                <div style={{ marginBottom: '2px', borderBottom: '1px dashed #4ade80', paddingBottom: '2px' }}>
+                    <a
+                        href="/.netlify/functions/view-logs"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: 'bold' }}
+                    >
+                        [VIEW LOGS]
+                    </a>
+                </div>
+            )}
 
+            {/* Map/Coords - Hidden until visible (30s delay) or Blacklisted (Immediate) */}
+            {(visible || isBlacklisted) && (
+                !isBlacklisted ? (
                     <a
                         href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
                         target="_blank"
@@ -96,20 +97,27 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
                             LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
                         </div>
                     </a>
-                </>
-            ) : (
-                <>
-                    {coords.ip && (
+                ) : (
+                    <>
+                        {coords.ip && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
+                                IP: {coords.ip}
+                            </div>
+                        )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
-                            IP: {coords.ip}
+                            <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
+                            LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
                         </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
-                        LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
-                    </div>
-                </>
+                    </>
+                )
+            )}
+
+            {/* Loading State for Map (if not visible yet and not blacklisted) */}
+            {!visible && !isBlacklisted && (
+                <div style={{ opacity: 0.5, fontStyle: 'italic' }}>
+                    Establishing secure link...
+                </div>
             )}
         </div>
     );
