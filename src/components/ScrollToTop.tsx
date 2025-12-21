@@ -17,9 +17,8 @@ export const ScrollToTop: React.FC = () => {
 
             const scrollPercentage = scrolledMap / totalHeight;
 
-            // User Requirement: "does not show if the page is showing the top 85%"
-            // This implies it shows only when passed 85% of the scrollable area.
-            if (scrollPercentage > 0.85) {
+            // User Requirement: "does not show if the page is showing the top 75%" (Bottom 25%)
+            if (scrollPercentage > 0.75) {
                 setVisible(true);
             } else {
                 setVisible(false);
