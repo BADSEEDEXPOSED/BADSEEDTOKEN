@@ -63,31 +63,28 @@ export const HauntedMarquee: React.FC = () => {
     }, []);
 
     return (
-        <div style={{
+        <div className="marquee-wrapper" style={{
             position: 'absolute',
-            top: '45px', // Moved up "tiny bit more" from 55px
+            top: '45px',
             left: 0,
             width: '100%',
-            textAlign: 'center',
-            zIndex: 15, // Below Side Pillars (25) but above Video (0)
+            zIndex: 15,
             pointerEvents: 'none',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            height: '30px',
             overflow: 'hidden'
         }}>
-            <div style={{
+            <div className="marquee-text" style={{
                 opacity: opacity,
-                transition: 'opacity 2s ease-in-out', // "Phasing in and out slowly"
-                color: '#C0C0C0', // Silver
+                transition: 'opacity 2s ease-in-out',
+                color: '#C0C0C0',
                 fontWeight: 'bold',
                 fontFamily: 'system-ui, sans-serif',
-                fontSize: '13px', // Sized to fit 1 line
-                textShadow: '0 0 4px rgba(255, 255, 255, 0.4), 0 0 8px rgba(192, 192, 192, 0.2)', // Fuzzy/Haunted
-                filter: 'drop-shadow(0 0 8px rgba(139, 0, 0, 0.6)) blur(0.3px)', // Deep red shadow + slight blur
-                whiteSpace: 'nowrap',
-                letterSpacing: '0.05em'
+                textShadow: '0 0 4px rgba(255, 255, 255, 0.4), 0 0 8px rgba(192, 192, 192, 0.2)',
+                filter: 'drop-shadow(0 0 8px rgba(139, 0, 0, 0.6)) blur(0.3px)',
+                letterSpacing: '0.05em',
+                textAlign: 'center'
             }}>
                 {text}
             </div>

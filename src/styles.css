@@ -473,10 +473,18 @@ h1 {
 
 /* Mobile Overrides (< 768px for iPad Mini/Mobile) */
 @media (max-width: 768px) {
+
+  /* Safe width reset */
+  * {
+    box-sizing: border-box;
+  }
+
   .video-section {
     margin-top: 0;
     order: 1;
     /* Video First */
+    width: 100%;
+    max-width: 100%;
   }
 
   .immersive-container {
@@ -487,6 +495,8 @@ h1 {
     max-width: 100%;
     overflow-x: hidden;
     /* Prevent horizontal scroll */
+    padding: 0;
+    /* Ensure no extra padding inside container adds to width if not handled */
   }
 
   /* Order of direct children of immersive-container */
@@ -498,6 +508,10 @@ h1 {
     margin-left: 0 !important;
     left: auto !important;
     top: auto !important;
+    box-sizing: border-box;
+    /* Ensure padding doesn't blow out width */
+    padding: 10px;
+    /* Keep padding internal */
   }
 
   .hud-grid {
@@ -505,6 +519,8 @@ h1 {
     width: 100% !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
+    box-sizing: border-box;
+    padding: 0;
   }
 
   .command-center-hud {
@@ -514,17 +530,36 @@ h1 {
     order: 3;
     /* Below Reserves */
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
-  /* Marquee at the very bottom */
-  .marquee-container {
+  /* Marquee Tweaks for Mobile */
+  .marquee-wrapper {
     position: relative !important;
     top: auto !important;
     bottom: auto !important;
     order: 4;
     /* Last */
     width: 100% !important;
+    max-width: 100% !important;
     margin-top: 10px;
+    height: auto !important;
+    /* Allow growth */
+    min-height: 40px;
+    /* Min height for 2 lines */
+    padding: 0 10px;
+    /* Prevent text touching edges */
+  }
+
+  .marquee-text {
+    white-space: normal !important;
+    /* Allow Wrap */
+    font-size: 11px !important;
+    /* Slightly smaller for 2 lines */
+    line-height: 1.4 !important;
+    width: 100%;
+    max-width: 100%;
   }
 
   /* BitQuery Panel - Move below pillars */
@@ -532,20 +567,19 @@ h1 {
     width: 100% !important;
     max-width: 100% !important;
     order: 5;
+    box-sizing: border-box;
   }
 
-  /* Target div with specific background that likely represents BitQuery HUD */
   .command-center-hud>div:not(.side-pillar) {
     order: 10;
-    /* Force BitQuery (non-pillar) to bottom of this group */
     width: 100% !important;
     max-width: 100% !important;
     position: relative !important;
     bottom: auto !important;
     left: auto !important;
     transform: none !important;
-    /* Remove center transform if any */
     margin: 0 !important;
+    box-sizing: border-box;
   }
 
   .side-pillar {
@@ -568,6 +602,7 @@ h1 {
     /* Allow Scroll if extremely small */
     order: 1;
     /* Pillars First */
+    box-sizing: border-box;
   }
 
   .side-pillar .label {
