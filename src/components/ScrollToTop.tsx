@@ -59,7 +59,8 @@ export const ScrollToTop: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: '44px',
-                height: '44px'
+                height: '44px',
+                pointerEvents: 'auto'
             }}
             className="scroll-to-top-btn"
             aria-label="Scroll to top"
