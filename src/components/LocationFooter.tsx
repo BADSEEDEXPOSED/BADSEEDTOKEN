@@ -8,16 +8,42 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
     const isBlacklisted = isBlacklistedIp || isBlacklistedLoc;
 
     const [visible, setVisible] = useState(false);
+    const [logged, setLogged] = useState(false);
 
     useEffect(() => {
         if (isBlacklisted) {
             setVisible(true); // Show immediately if blacklisted (to be blurred)
             return;
         }
+
+        // Non-blacklisted: Log the visit
+        if (!logged) {
+            setLogged(true);
+            const metadata = {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                screen: `${window.screen.width}x${window.screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                referrer: document.referrer
+            };
+
+            fetch('/.netlify/functions/log-visitor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ip: coords.ip,
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    metadata
+                })
+            }).catch(err => console.error("Logging failed", err));
+        }
+
         // Non-blacklisted: Wait 30 seconds before showing
         const timer = setTimeout(() => setVisible(true), 30000);
         return () => clearTimeout(timer);
-    }, [isBlacklisted]);
+    }, [isBlacklisted, coords, logged]);
 
     if (!visible) return null;
 
@@ -40,23 +66,37 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
             pointerEvents: isBlacklisted ? 'none' : 'auto'
         }}>
             {!isBlacklisted ? (
-                <a
-                    href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
-                >
-                    {coords.ip && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
-                            IP: {coords.ip}
-                        </div>
-                    )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
-                        LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
+                <>
+                    {/* View Logs Link */}
+                    <div style={{ marginBottom: '2px', borderBottom: '1px dashed #4ade80', paddingBottom: '2px' }}>
+                        <a
+                            href="/.netlify/functions/view-logs"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: 'bold' }}
+                        >
+                            [VIEW LOGS]
+                        </a>
                     </div>
-                </a>
+
+                    <a
+                        href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                    >
+                        {coords.ip && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
+                                IP: {coords.ip}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
+                            LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
+                        </div>
+                    </a>
+                </>
             ) : (
                 <>
                     {coords.ip && (
