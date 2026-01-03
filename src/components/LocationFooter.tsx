@@ -9,6 +9,7 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
 
     const [visible, setVisible] = useState(false);
     const [logged, setLogged] = useState(false);
+    const [forceUnblur, setForceUnblur] = useState(false);
 
     useEffect(() => {
         if (isBlacklisted) {
@@ -46,80 +47,103 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
     }, [isBlacklisted, coords, logged]);
 
     return (
-        <div style={{
-            fontSize: '10px',
-            color: '#4ade80',
-            fontFamily: 'monospace',
-            background: 'rgba(0,0,0,0.7)',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            border: '1px solid rgba(74, 222, 128, 0.2)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-            lineHeight: '1.2',
-            letterSpacing: '-0.5px',
-            filter: isBlacklisted ? 'blur(4px)' : 'none',
-            userSelect: isBlacklisted ? 'none' : 'auto',
-            pointerEvents: isBlacklisted ? 'none' : 'auto'
-        }}>
-            {!isBlacklisted && (
-                /* View Logs Link - Always visible once granted */
-                <div style={{ marginBottom: '2px', borderBottom: '1px dashed #4ade80', paddingBottom: '2px' }}>
-                    <a
-                        href="/.netlify/functions/view-logs"
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: 'bold' }}
-                    >
-                        [VIEW LOGS]
-                    </a>
-                </div>
+        <React.Fragment>
+            {isBlacklisted && (
+                <button
+                    onClick={() => setForceUnblur(!forceUnblur)}
+                    style={{
+                        alignSelf: 'flex-start',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#4ade80',
+                        fontSize: '9px',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        opacity: 0.5,
+                        marginBottom: '-4px', // Pull closer to the box
+                        zIndex: 101 // Above the box
+                    }}
+                    title="Toggle Visibility"
+                >
+                    {forceUnblur ? '👁️' : '🔒'}
+                </button>
             )}
+            <div style={{
+                fontSize: '10px',
+                color: '#4ade80',
+                fontFamily: 'monospace',
+                background: 'rgba(0,0,0,0.7)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: '1px solid rgba(74, 222, 128, 0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                lineHeight: '1.2',
+                letterSpacing: '-0.5px',
+                filter: (isBlacklisted && !forceUnblur) ? 'blur(4px)' : 'none',
+                userSelect: (isBlacklisted && !forceUnblur) ? 'none' : 'auto',
+                pointerEvents: (isBlacklisted && !forceUnblur) ? 'none' : 'auto',
+                transition: 'filter 0.3s ease'
+            }}>
+                {!isBlacklisted && (
+                    /* View Logs Link - Always visible once granted */
+                    <div style={{ marginBottom: '2px', borderBottom: '1px dashed #4ade80', paddingBottom: '2px' }}>
+                        <a
+                            href="/.netlify/functions/view-logs"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: 'bold' }}
+                        >
+                            [VIEW LOGS]
+                        </a>
+                    </div>
+                )}
 
-            {/* Map/Coords - Hidden until visible (30s delay) or Blacklisted (Immediate) */}
-            {(visible || isBlacklisted) && (
-                !isBlacklisted ? (
-                    <a
-                        href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
-                    >
-                        {coords.ip && (
+                {/* Map/Coords - Hidden until visible (30s delay) or Blacklisted (Immediate) */}
+                {(visible || isBlacklisted) && (
+                    !isBlacklisted ? (
+                        <a
+                            href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: 'inherit', textDecoration: 'none', cursor: 'pointer' }}
+                        >
+                            {coords.ip && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
+                                    IP: {coords.ip}
+                                </div>
+                            )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
-                                IP: {coords.ip}
+                                <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
+                                LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
                             </div>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
-                            LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
-                        </div>
-                    </a>
-                ) : (
-                    <>
-                        {coords.ip && (
+                        </a>
+                    ) : (
+                        <>
+                            {coords.ip && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
+                                    IP: {coords.ip}
+                                </div>
+                            )}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ width: '4px', height: '4px', background: '#4ade80', borderRadius: '50%', display: 'inline-block' }}></span>
-                                IP: {coords.ip}
+                                <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
+                                LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
                             </div>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ width: '4px', height: '4px', background: 'transparent', borderRadius: '50%', display: 'inline-block' }}></span>
-                            LOC: [{coords.type}] {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)} <span style={{ opacity: 0.6 }}>(±{coords.accuracy || '?'}m)</span>
-                        </div>
-                    </>
-                )
-            )}
+                        </>
+                    )
+                )}
 
-            {/* Loading State for Map (if not visible yet and not blacklisted) */}
-            {!visible && !isBlacklisted && (
-                <div style={{ opacity: 0.5, fontStyle: 'italic' }}>
-                    Establishing secure link...
-                </div>
-            )}
-        </div>
+                {/* Loading State for Map (if not visible yet and not blacklisted) */}
+                {!visible && !isBlacklisted && (
+                    <div style={{ opacity: 0.5, fontStyle: 'italic' }}>
+                        Establishing secure link...
+                    </div>
+                )}
+            </div>
+        </React.Fragment>
     );
 };
 

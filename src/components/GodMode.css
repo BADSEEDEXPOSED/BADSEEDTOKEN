@@ -1,0 +1,121 @@
+.god-mode-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 9999;
+    font-family: 'Courier New', monospace;
+    color: #0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+
+.god-mode-terminal {
+    width: 90%;
+    max-width: 1000px;
+    height: 80vh;
+    border: 2px solid #0f0;
+    background: #000;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.god-header {
+    padding: 15px;
+    background: #001100;
+    border-bottom: 1px solid #0f0;
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.god-close {
+    background: transparent;
+    border: none;
+    color: #0f0;
+    cursor: pointer;
+}
+
+.god-close:hover {
+    color: #fff;
+}
+
+.god-grid {
+    flex: 1;
+    display: flex;
+    gap: 0;
+}
+
+.god-panel {
+    flex: 1;
+    padding: 20px;
+    border-right: 1px solid #0f0;
+}
+
+.god-panel:last-child {
+    border-right: none;
+}
+
+.god-panel h3 {
+    margin-top: 0;
+    border-bottom: 1px dashed #0f0;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.god-stat {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.god-stat label {
+    opacity: 0.7;
+}
+
+.god-raw {
+    margin-top: 30px;
+    font-size: 0.8rem;
+    color: #00aa00;
+    border: 1px solid #005500;
+    padding: 10px;
+}
+
+.god-prophecy {
+    background: #001100;
+    padding: 15px;
+    border: 1px solid #0f0;
+    margin-bottom: 20px;
+}
+
+.god-prophecy p {
+    font-style: italic;
+    color: #fff;
+    margin-top: 10px;
+}
+
+.status-ok {
+    color: #0f0;
+}
+
+.status-err {
+    color: #f00;
+}
+
+.god-footer {
+    padding: 10px;
+    border-top: 1px solid #0f0;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    opacity: 0.6;
+}

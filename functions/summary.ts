@@ -55,6 +55,10 @@ export const handler: Handler = async () => {
 
         return {
             statusCode: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify(response)
         };
     } catch (e) {
@@ -62,6 +66,10 @@ export const handler: Handler = async () => {
         // Fallback response: Pre-Launch State
         return {
             statusCode: 200,
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({
                 mint: TOKEN_CONFIG.mint,
                 symbol: TOKEN_CONFIG.symbol,
