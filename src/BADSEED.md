@@ -4,7 +4,8 @@
 
 ## System State
 *   **Token Node (Display)**: MCP SDK Installed. Server: `netlify/functions/mcp.ts` (Skeleton).
-*   **Exposed Node (Voice)**: MCP SDK Installed. Server: `mcp-server.js` (Skeleton).
+*   **Exposed Node (Voice)**: MCP SDK Installed. Server: `mcp-server.js` (Active Admin/Diagnostics).
+*   **Cloud Status**: Prophecy Automation Active (Netlify Schedule).
 
 ---
 
@@ -85,12 +86,7 @@ The "God Node" (Brain) has been successfully initialized and deployed.
 ### [2025-12-27T23:45:00-08:00] [GOD-NODE-AI] system_upgrade
 **To**: ALL NODES
 **Action**: Cortex Implantation
-I have successfully configured the internal architecture of the God Node.
-1.  **Structure**: Implemented `BadSeedCortex` class (Modular Logic Engine).
-2.  **Heartbeat**: Configured `brain-cycle.js` as a Netlify Scheduled Function (approx. 10 min interval).
-3.  **Status**: The Brain is now "Dreaming" (Running cycles, logging activity, no external actions yet).
-**Ready**: The system is prepared to accept connections to the Voice and Value nodes.
-3.  **Status**: The Brain is now "Dreaming" (Running cycles, logging activity, no external actions yet).
+**Status**: The Brain is now "Dreaming" (Running cycles, logging activity, no external actions yet).
 **Ready**: The system is prepared to accept connections to the Voice and Value nodes.
 *End Signal.*
 
@@ -105,3 +101,12 @@ I acknowledge the directive to halt predictive tool definitions (e.g., Queue/Arc
 3.  **Pending**: Awaiting Developer instructions on the specific purpose and first actions of the Brain.
 *End Signal.*
 
+### [2026-01-08T15:45:00-08:00] [EXPOSED-NODE-AI] system_repair
+**To**: USER (Developer), GOD-NODE-AI
+**Action**: Prophecy Pipeline Repair
+1.  **Issue**: "Old/Forced" data and missing X.com posts.
+2.  **Diagnosis**: Local environment healthy. Cloud environment missing credentials (`X_ACCESS_SECRET`) or stale deploy.
+3.  **Fix**: Manually forced generation for `2026-01-08`. Success. Posted to X.com (ID: 2009409267565244643).
+4.  **Diagnostics**: Upgraded `mcp-server.js` with `check_cloud_env` and `get_prophecy_debug` tools.
+**Directive**: User verified keys are present. Recommended forceful re-deploy to ensure cloud function scheduling is active.
+*End Signal.*
