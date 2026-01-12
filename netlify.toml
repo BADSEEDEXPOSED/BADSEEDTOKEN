@@ -12,6 +12,9 @@
 [functions.fee-worker]
   schedule = "*/5 * * * *"
 
+[functions.guardian]
+  schedule = "10 0,18 * * *"
+
 [[headers]]
   for = "/*.mp4"
   [headers.values]
