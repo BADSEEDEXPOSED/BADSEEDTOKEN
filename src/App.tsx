@@ -238,6 +238,22 @@ const App: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    // Track visitor for analytics
+    useEffect(() => {
+        const trackVisitor = async () => {
+            try {
+                await fetch('/.netlify/functions/visitor-track', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                console.log('Visitor tracked');
+            } catch (error) {
+                console.warn('Visitor tracking failed:', error);
+            }
+        };
+        trackVisitor();
+    }, []);
+
     const fetchAll = async () => {
         try {
             const [sRes, mRes] = await Promise.all([
