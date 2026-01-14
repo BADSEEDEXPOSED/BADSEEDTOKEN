@@ -1,6 +1,6 @@
 // functions/log-visitor.ts
 import type { Handler } from "@netlify/functions";
-import { getStore } from "@netlify/blobs";
+import { redis } from "@lib/redis";
 
 // Blacklist Constants (Mirroring Frontend)
 const BLACKLIST_IPS = ['184.65.126.30'];
@@ -45,19 +45,6 @@ export const handler: Handler = async (event, context) => {
             };
         }
 
-        // Initialize Store
-        const store = getStore("visitor-logs");
-        const blobKey = "visitors.json";
-
-        // Read existing logs (or empty array)
-        let logs: any[] = [];
-        try {
-            const raw = await store.get(blobKey, { type: "json" });
-            if (Array.isArray(raw)) logs = raw;
-        } catch (e) {
-            // No existing blob, start fresh
-        }
-
         // Create Log Entry
         const entry = {
             timestamp: new Date().toISOString(),
@@ -66,15 +53,18 @@ export const handler: Handler = async (event, context) => {
             metadata: metadata || {}
         };
 
-        logs.push(entry);
+        // Store in Redis with timestamp as score
+        const key = 'analytics:visitor_logs';
+        await redis.zadd(key, { score: Date.now(), member: JSON.stringify(entry) });
 
-        // Save back to Blob
-        await store.setJSON(blobKey, logs);
+        // Keep only last 7 days of data
+        const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        await redis.zremrangebyscore(key, 0, sevenDaysAgo);
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify({ success: true, count: logs.length })
+            body: JSON.stringify({ success: true })
         };
 
     } catch (error: any) {

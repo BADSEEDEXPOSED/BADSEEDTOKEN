@@ -1,6 +1,6 @@
 // functions/view-logs.ts
 import type { Handler } from "@netlify/functions";
-import { getStore } from "@netlify/blobs";
+import { redis } from "@lib/redis";
 
 export const handler: Handler = async (event, context) => {
     const headers = {
@@ -10,31 +10,31 @@ export const handler: Handler = async (event, context) => {
     };
 
     try {
-        const store = getStore("visitor-logs");
-        const blobKey = "visitors.json";
+        // Get visitor logs from Redis (last 7 days)
+        const key = 'analytics:visitor_logs';
+        const now = Date.now();
+        const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
 
-        const logs = await store.get(blobKey, { type: "json" });
+        const logs = await redis.zrange<string[]>(key, sevenDaysAgo, now, {
+            byScore: true
+        }).catch(() => []);
 
-        if (!logs) {
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify([])
-            };
-        }
+        const parsed = (logs || []).map((l: string) => {
+            try { return JSON.parse(l); } catch { return null; }
+        }).filter(Boolean);
 
         return {
             statusCode: 200,
             headers,
-            body: JSON.stringify(logs, null, 2)
+            body: JSON.stringify(parsed, null, 2)
         };
 
     } catch (error: any) {
         console.error("View logs error:", error);
         return {
-            statusCode: 500,
+            statusCode: 200,
             headers,
-            body: JSON.stringify({ error: "Failed to retrieve logs" })
+            body: JSON.stringify([])
         };
     }
 };
