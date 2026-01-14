@@ -3,14 +3,6 @@
   publish = "dist"
   functions = "functions"
 
-[[edge_functions]]
-  path = "/.netlify/functions/log-visitor"
-  function = "log-visitor"
-
-[[edge_functions]]
-  path = "/.netlify/functions/view-logs"
-  function = "view-logs"
-
 [functions]
   node_bundler = "esbuild"
 
