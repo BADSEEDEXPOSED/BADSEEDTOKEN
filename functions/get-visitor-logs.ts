@@ -1,4 +1,4 @@
-// functions/view-logs.ts
+// functions/get-visitor-logs.ts
 import type { Handler } from "@netlify/functions";
 import { redis } from "@lib/redis";
 
