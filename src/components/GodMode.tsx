@@ -120,6 +120,15 @@ export const GodMode: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
                 <div className="god-footer">
                     <span>SYNC: {lastUpdated}</span>
+                    <a href="https://github.com/BADSEEDEXPOSED/BADSEEDMCP/actions/workflows/pulse-of-growth.yml"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="god-badge">
+                        <img
+                            src="https://github.com/BADSEEDEXPOSED/BADSEEDMCP/actions/workflows/pulse-of-growth.yml/badge.svg"
+                            alt="Garden Care Status"
+                        />
+                    </a>
                     <span>BRAIN: WAITING FOR INSTRUCTION...</span>
                 </div>
             </div>
