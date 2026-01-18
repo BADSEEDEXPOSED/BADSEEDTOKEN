@@ -3,6 +3,9 @@ import type { Handler } from "@netlify/functions";
 import { redis } from "../lib/redis";
 import { redisKeys, TOKEN_CONFIG } from "../lib/tokenConfig";
 import { getRaydiumMetrics, connection } from "../lib/helius";
+
+// Milestone tracking key (for Agent historical context - additive only)
+const MILESTONES_KEY = `token:MILESTONES_V1:${TOKEN_CONFIG.mint}`;
 import { PumpFunSDK } from "../lib/pump";
 
 export const handler: Handler = async () => {
@@ -193,6 +196,37 @@ export const handler: Handler = async () => {
 
         await redis.zadd(redisKeys.tsPrice, { score: now, member: pricePoint });
         await redis.zadd(redisKeys.tsMcap, { score: now, member: mcapPoint });
+
+        // --- MILESTONE TRACKING (Additive - for Agent historical context) ---
+        // Update ATH curve progress if current is higher
+        try {
+            const milestones = (await redis.hgetall<Record<string, string>>(MILESTONES_KEY)) || {};
+            const storedAthProgress = parseFloat(milestones.ath_curve_progress || "0");
+            const storedAthMcap = parseFloat(milestones.ath_market_cap_sol || "0");
+
+            const updates: Record<string, string> = {};
+
+            if (curveProgress > storedAthProgress) {
+                updates.ath_curve_progress = curveProgress.toString();
+                updates.ath_curve_progress_date = new Date(now).toISOString();
+            }
+
+            if (marketCapSol > storedAthMcap) {
+                updates.ath_market_cap_sol = marketCapSol.toString();
+                updates.ath_market_cap_date = new Date(now).toISOString();
+            }
+
+            // Always update last seen values
+            updates.last_mode = mode;
+            updates.last_updated = new Date(now).toISOString();
+
+            if (Object.keys(updates).length > 0) {
+                await redis.hmset(MILESTONES_KEY, updates);
+            }
+        } catch (milestoneErr) {
+            // Non-critical: Don't fail the main poller if milestone tracking fails
+            console.warn("Milestone tracking warning:", milestoneErr);
+        }
 
         return {
             statusCode: 200,
