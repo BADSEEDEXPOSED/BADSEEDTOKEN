@@ -1,17 +1,22 @@
 // Verified Push: 2025-12-13 22:32
 import React, { useEffect, useState } from "react";
+import { functionUrl, publicAssetUrl } from "./api";
+import { MessageFeed } from './components/MessageFeed';
 import { Buffer } from "buffer";
 // @ts-ignore
 window.Buffer = Buffer;
 import trailerVideo from "./assets/trailer.mp4";
 import { ReservesHUD } from "./components/ReservesHUD";
 import { BitQueryHUD } from "./components/BitQueryHUD";
-import { CommandCenterHUD } from "./components/CommandCenterHUD";
+import { CommandCenterHUD, type MarketSnapshot } from "./components/CommandCenterHUD";
 import { HauntedMarquee } from "./components/HauntedMarquee";
 import { LocationFooter } from "./components/LocationFooter";
 import { ScrollToTop } from "./components/ScrollToTop";
 
 type Summary = {
+    data_status?: string;
+    stale?: boolean;
+    last_checked?: string;
     mint: string;
     symbol: string;
     name: string;
@@ -107,19 +112,13 @@ const DonationProgress: React.FC<{ donated: number; goal: number; pre: number }>
     );
 };
 
-type Metrics = {
-    price: { t: number; price_sol: number }[];
-    market_cap: { t: number; market_cap_sol: number }[];
-    fees_claimed_cumulative: { t: number; amount_sol: number }[];
-    donations_cumulative: { t: number; amount_sol: number }[];
-};
-
 function formatSol(value: number): string {
+    if (value == null || !Number.isFinite(value)) return "Awaiting market data";
     return `${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} SOL`;
 }
 
 function formatPrice(value: number): string {
-    return `${value.toFixed(10)} SOL`;
+    return value == null || !Number.isFinite(value) ? "Awaiting launch" : `${value.toFixed(10)} SOL`;
 }
 
 function shorten(addr: string): string {
@@ -151,19 +150,19 @@ const LORE_PHRASES = [
 const RotatingNotes: React.FC<{ mode: string }> = ({ mode }) => {
     const getMetricsNote = (m: string) => {
         if (m === "pre-launch") return "Metrics: System armed. Awaiting signal. The bonding curve is dormant until the first transaction ignites the protocol.";
-        if (m === "raydium") return "Metrics: Migration complete. Liquidity unlocked on Raydium. The seed has grown beyond the curve.";
-        return "Metrics: Bonding Curve active. Tracking trajectory towards the Raydium horizon. Every trade accelerates the migration event.";
+        if (m === "pumpswap") return "Metrics: Migration complete. The token now trades through PumpSwap.";
+        return "Metrics: Bonding Curve active. Tracking trajectory towards the PumpSwap horizon. Every trade accelerates the migration event.";
     };
 
     const [lore, setLore] = useState(LORE_PHRASES[0]);
 
     // Notes Array - Index 2 is Dynamic Lore
     const NOTES = [
-        "This dashboard tracks creator fees flowing from the BadSeed creator wallet to the donation wallet. As trades occur on Pump.fun / PumpSwap, creator fees accumulate and are forwarded to the Donation Wallet.",
+        "This dashboard separates authored atmosphere from measured public market data. Estimates are labelled; chain activity becomes visible when it exists.",
         getMetricsNote(mode),
         lore,
-        "System: Real-time telemetry is engaged. Monitoring on-chain events with millisecond precision to ensure total transparency.",
-        "Philosophy: In a garden of volatility, we plant stability. The user trades, the protocol builds."
+        mode === "pre-launch" ? "Signal: The public ledger is quiet. Launch watch remains active." : "Signal: Market readings are drawn from public chain and market data.",
+        "Observation changes nothing. Participation changes the record."
     ];
 
     const [index, setIndex] = useState(0);
@@ -222,7 +221,7 @@ const LiveDebug: React.FC<{ text: string }> = ({ text }) => {
 
 const App: React.FC = () => {
     const [summary, setSummary] = useState<Summary | null>(null);
-    const [metrics, setMetrics] = useState<Metrics | null>(null);
+    const [market, setMarket] = useState<MarketSnapshot | null>(null);
     const [loading, setLoading] = useState(true);
     const [solPrice, setSolPrice] = useState<number | null>(null);
 
@@ -242,7 +241,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const trackVisitor = async () => {
             try {
-                await fetch('/.netlify/functions/visitor-track', {
+                await fetch(functionUrl('visitor-track'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -256,32 +255,19 @@ const App: React.FC = () => {
 
     const fetchAll = async () => {
         try {
-            const [sRes, mRes] = await Promise.all([
-                fetch("/.netlify/functions/summary"),
-                fetch("/.netlify/functions/metrics")
+            const [sRes, marketRes] = await Promise.all([
+                fetch(functionUrl("summary")),
+                fetch(functionUrl("market-snapshot"))
             ]);
+            if (!sRes.ok || !marketRes.ok) throw new Error("Dashboard data unavailable");
             const sJson = await sRes.json();
-            const mJson = await mRes.json();
-
-            // Client-Side Sanitization: Never show 0 for Price/Mcap
-            // If API returns 0 (e.g. cold server), use Pre-Launch defaults
-            if (!sJson.price_sol || sJson.price_sol === 0) {
-                const INIT_PRICE = 0.000000028;
-                sJson.price_sol = INIT_PRICE;
-                sJson.debug_price = `vSol (30.00) / vTokens (1073.0M)`;
-            }
-            if (!sJson.market_cap_sol || sJson.market_cap_sol === 0) {
-                sJson.market_cap_sol = 28;
-                sJson.debug_mcap = `Price * Supply (28.0 SOL)`;
-            }
-            if (!sJson.curve_progress) {
-                sJson.debug_progress = `Sold (0.0M) / Target (793.1M)`;
-            }
+            const marketJson = await marketRes.json();
 
             setSummary(sJson);
-            setMetrics(mJson);
+            setMarket(marketJson);
             setLoading(false);
         } catch (e) {
+            setSummary(previous => previous ? { ...previous, stale: true } : null);
             console.error("Error fetching data:", e);
             setLoading(false);
         }
@@ -324,7 +310,9 @@ const App: React.FC = () => {
 
     return (
         <>
-            <iframe id="background-frame" src="/background.html" title="Background"></iframe>
+            <iframe id="background-frame" src={publicAssetUrl("background.html")} title="Background"></iframe>
+            <MessageFeed />
+            <a className="seed-page-switch" href="https://badseed.exposed/">Enter the Seed</a>
             <div className="app-root">
                 <header className="header">
                     <div>
@@ -333,6 +321,9 @@ const App: React.FC = () => {
                         </h1>
                         <div className="muted small">Mint: {shorten(summary.mint)}</div>
                     </div>
+                    <a className="canonical-live-link" href="https://badseed.exposed/live/">
+                        badseed.exposed/live/
+                    </a>
                     <div className="small right">
                         <div>Creator: {shorten(summary.creator_wallet)}</div>
                         <div>Donation: {shorten(summary.donation_wallet)}</div>
@@ -343,23 +334,24 @@ const App: React.FC = () => {
                                 </div>
                             )}
                             <div className="badge">
-                                {summary.mode === "raydium" ? "Raydium Phase" :
+                                {summary.mode === "pumpswap" ? "PumpSwap Phase" :
                                     summary.mode === "pre-launch" ? "Pre-Launch Phase" :
-                                        "PumpSwap Phase"}
+                                        "Bonding Curve Phase"}
                             </div>
                         </div>
                     </div>
                 </header>
 
+                <div className="card" role="status">{summary.stale ? "Data delayed — last confirmed readings shown" : summary.data_status === "awaiting-launch" ? "Pre-launch · starting curve estimates shown · checking for launch every minute" : summary.data_status === "live" ? "Live on-chain data" : "Market data unavailable"}</div>
                 <section className="grid">
                     <div className="card debug-card">
                         <div className="label">Price</div>
-                        <div className="value">{formatPrice(summary.price_sol)}</div>
+                        <div className="value">{formatPrice(summary.price_sol ?? (summary.mode === "pre-launch" ? 30 / 1073000000 : null))}</div>
                         {summary.debug_price && <LiveDebug text={summary.debug_price} />}
                     </div>
                     <div className="card debug-card">
                         <div className="label">Market Cap</div>
-                        <div className="value">{formatSol(summary.market_cap_sol)}</div>
+                        <div className="value">{formatSol(summary.market_cap_sol ?? (summary.mode === "pre-launch" ? 30 / 1073000000 * 1000000000 : null))}</div>
                         {summary.debug_mcap && <LiveDebug text={summary.debug_mcap} />}
                     </div>
                     <div className="card">
@@ -381,12 +373,12 @@ const App: React.FC = () => {
                     </div>
                 </section>
 
-                <section className="card">
+                <section className="card capital-panel">
                     <div className="label">Seed Capital</div>
                     <DonationProgress donated={summary.total_donated_sol} goal={100} pre={summary.pre_launch_donated_sol} />
                 </section>
 
-                <section className="card debug-card">
+                <section className="card debug-card curve-panel">
                     <div className="label">Curve Progress</div>
                     <CurveProgress value={summary.curve_progress} />
                     {summary.debug_progress && <LiveDebug text={summary.debug_progress} />}
@@ -395,7 +387,7 @@ const App: React.FC = () => {
 
 
 
-                <section className="card">
+                <section className="card notes-panel">
                     <div className="label">Notes</div>
                     <RotatingNotes mode={summary.mode} />
                 </section>
@@ -418,7 +410,7 @@ const App: React.FC = () => {
                     {/* Overlays / Siblings */}
                     <ReservesHUD data={summary} />
                     <HauntedMarquee />
-                    <CommandCenterHUD recentActivity={summary?.recent_activity} mode={summary?.mode} />
+                    <CommandCenterHUD market={market} mode={summary?.mode} stale={summary?.stale} />
                 </section>
                 <div className="spacer"></div>
                 <LocationFooter />
@@ -433,10 +425,10 @@ const App: React.FC = () => {
 
 
 const CurveProgress: React.FC<{ value: number }> = ({ value }) => {
-    const pct = Math.max(0, Math.min(100, value * 100));
+    const pct = Math.max(0, Math.min(100, value));
     return (
         <div>
-            <div className="small muted">{pct.toFixed(1)}% towards Raydium migration</div>
+            <div className="small muted">{pct.toFixed(1)}% towards PumpSwap migration</div>
             <div className="bar">
                 <div className="bar-fill curve" style={{ width: `${pct}%` }} />
             </div>

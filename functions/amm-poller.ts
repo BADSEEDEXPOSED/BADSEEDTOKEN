@@ -2,37 +2,29 @@
 import type { Handler } from "@netlify/functions";
 import { redis } from "../lib/redis";
 import { redisKeys, TOKEN_CONFIG } from "../lib/tokenConfig";
-import { getRaydiumMetrics, connection } from "../lib/helius";
+import { getPumpSwapMetrics, connection } from "../lib/helius";
 
 // Milestone tracking key (for Agent historical context - additive only)
 const MILESTONES_KEY = `token:MILESTONES_V1:${TOKEN_CONFIG.mint}`;
 import { PumpFunSDK } from "../lib/pump";
 
 export const handler: Handler = async () => {
-    let mode = (await redis.get<string>(redisKeys.mode)) || "pumpswap";
+    let mode = (await redis.get<string>(redisKeys.mode)) || "pre-launch";
 
     let priceSol = 0;
     let marketCapSol = 0;
     let curveProgress = 0;
+    let curveState: import("../lib/pump").BondingCurveState | null = null;
 
-    if (mode === "pumpswap") {
+    {
         try {
             const pump = new PumpFunSDK(connection);
             const state = await pump.getBondingCurveState(TOKEN_CONFIG.mint);
 
             if (state) {
-                const vSol = Number(state.virtualSolReserves) / 1e9;
-
-                // Strict Pre-Launch Detection (vSol Ground Truth)
-                // If vSol is < 30.05, we are still dormant.
-                if (vSol < 30.05) {
-                    mode = "pre-launch";
-                    await redis.set(redisKeys.mode, "pre-launch");
-                } else if (mode === "pre-launch") {
-                    // If we see volume, upgrade to pumpswap
-                    mode = "pumpswap";
-                    await redis.set(redisKeys.mode, "pumpswap");
-                }
+                curveState = state;
+                mode = state.complete ? "pumpswap" : "bonding-curve";
+                await redis.set(redisKeys.mode, mode);
 
                 priceSol = pump.calculatePrice(state);
                 curveProgress = pump.calculateProgress(state);
@@ -41,30 +33,28 @@ export const handler: Handler = async () => {
                 const supply = Number(state.tokenTotalSupply) / 1e6;
                 marketCapSol = priceSol * supply;
 
-                if (state.complete) {
-                    console.log("Bonding curve complete! Switching to Raydium.");
-                    await redis.set(redisKeys.mode, "raydium");
-                    mode = "raydium";
-                }
+                if (state.complete) console.log("Bonding curve complete. Reading the PumpSwap market.");
             } else {
                 console.log("Bonding curve not found (Pre-Launch).");
                 mode = "pre-launch";
                 await redis.set(redisKeys.mode, "pre-launch");
 
-                // Set Initial Values
-                const INIT_VTOKEN = 1073000000;
-                const INIT_VSOL = 30;
-                priceSol = INIT_VSOL / INIT_VTOKEN;
+                priceSol = 0;
                 curveProgress = 0;
-                marketCapSol = priceSol * 1000000000;
+                marketCapSol = 0;
             }
         } catch (e) {
-            console.error("PumpSwap polling error:", e);
+            await redis.hset(redisKeys.summary, { data_status: "unavailable", last_checked: new Date().toISOString() });
+            return { statusCode: 503, body: JSON.stringify({ error: "Market lookup failed" }) };
         }
     }
 
-    if (mode === "raydium") {
-        const m = await getRaydiumMetrics();
+    if (mode === "pumpswap") {
+        let m;
+        try { m = await getPumpSwapMetrics(); } catch {
+            await redis.hset(redisKeys.summary, { data_status: "unavailable", last_checked: new Date().toISOString() });
+            return { statusCode: 503, body: JSON.stringify({ error: "Migrated market unavailable" }) };
+        }
         priceSol = m.priceSol;
         marketCapSol = m.marketCapSol;
         curveProgress = 100; // Fixed 100%
@@ -82,31 +72,23 @@ export const handler: Handler = async () => {
     let debugMcap = "";
     let debugProgress = "";
 
-    if (mode === "pre-launch" || mode === "pumpswap") {
-        // Re-calculating vSol/vToken approx from price if state isn't available in this scope?
-        // Actually, if we are in this scope, we might have lost 'state' variable access if we are outside the try/catch.
-        // But we can approximate for the display:
-        const supply = 1000000000;
-        const vToken = 1073000000 - (curveProgress / 100 * 800000000); // Inverse progress
-        const vSol = priceSol * (vToken / 1000); // Approx formula
-
-        // Better approach: We need to pull the 'state' values out of the if block or just be simpler.
-        // Let's use simple logic:
-        const vSolEst = 30 + (curveProgress / 100 * 85);
-
-        debugPrice = `vSol (${vSolEst.toFixed(2)}) / vTokens (1073.0M)`; // Simplified for now
-        debugMcap = `Price * Supply (${(marketCapSol).toFixed(1)} SOL)`; // Actually simpler to show SOL mcap
-        // Corrected Target based on Pump Program Constants (793.1M saleable)
-        debugProgress = `Sold (${(curveProgress / 100 * 793.1).toFixed(1)}M) / Target (793.1M)`;
+    if (mode === "pre-launch" || mode === "bonding-curve") {
+        const vSol = curveState ? Number(curveState.virtualSolReserves) / 1e9 : 30;
+        const vToken = curveState ? Number(curveState.virtualTokenReserves) / 1e6 : 1073000000;
+        const remaining = curveState ? Number(curveState.realTokenReserves) / 1e6 : 793100000;
+        const sold = Math.max(0, 793100000 - remaining);
+        debugPrice = `vSOL (${vSol.toFixed(2)}) / vTokens (${(vToken / 1e6).toFixed(1)}M)`;
+        debugMcap = mode === "pre-launch" ? `Starting Price * Planned Supply (${(30 / 1073000000 * 1000000000).toFixed(1)} SOL)` : `Price * On-chain Supply (${marketCapSol.toFixed(1)} SOL)`;
+        debugProgress = `Sold (${(sold / 1e6).toFixed(1)}M) / Curve (${(793100000 / 1e6).toFixed(1)}M)`;
     } else {
-        debugPrice = `Raydium Pool Live`;
+        debugPrice = `PumpSwap Pool Live`;
         debugMcap = `Price * Supply`;
         debugProgress = `Bonding Complete`;
     }
 
     // --- HOST PROOF OF RESERVES (Phase 6) ---
     // Fetch real-time balances for transparency
-    let totalSupply = 1000000000;
+    let totalSupply = 0;
     let devBalance = 0;
     let donationBalance = 0;
     let burnBalance = 0;
@@ -115,13 +97,13 @@ export const handler: Handler = async () => {
         const { getTokenSupply, getTokenBalance } = await import("../lib/helius");
 
         // 1. Fetch Supply
-        totalSupply = await getTokenSupply(TOKEN_CONFIG.mint);
+        totalSupply = mode === "pre-launch" ? 0 : await getTokenSupply(TOKEN_CONFIG.mint);
 
         // 2. Fetch Wallet Balances
         // Note: These are light RPC calls (getTokenAccountsByOwner)
         const BURN_ADDRESS = "11111111111111111111111111111111";
 
-        [devBalance, donationBalance, burnBalance] = await Promise.all([
+        [devBalance, donationBalance, burnBalance] = mode === "pre-launch" ? [0, 0, 0] : await Promise.all([
             getTokenBalance(TOKEN_CONFIG.creatorWallet, TOKEN_CONFIG.mint),
             getTokenBalance(TOKEN_CONFIG.donationWallet, TOKEN_CONFIG.mint),
             getTokenBalance(BURN_ADDRESS, TOKEN_CONFIG.mint)
@@ -141,11 +123,11 @@ export const handler: Handler = async () => {
 
             // Priority 1: Get precise "Left To Sell" from On-Chain State
             // Note: We might have already fetched 'state' above, but fetching again or passing it down is safer for autonomy
-            const state = await pump.getBondingCurveState(TOKEN_CONFIG.mint);
+            const state = mode === "pre-launch" ? null : await pump.getBondingCurveState(TOKEN_CONFIG.mint);
 
             if (state) {
                 tokensLeftToSell = Number(state.realTokenReserves) / 1e6;
-            } else {
+            } else if (mode !== "pre-launch") {
                 // Priority 2: Fallback to ATA Balance (Balance - Reserved)
                 const curvePda = await pump.getBondingCurvePDA(new (await import("@solana/web3.js")).PublicKey(TOKEN_CONFIG.mint));
                 const { getTokenBalance } = await import("../lib/helius");
@@ -170,6 +152,8 @@ export const handler: Handler = async () => {
             mint: TOKEN_CONFIG.mint,
             symbol: TOKEN_CONFIG.symbol,
             name: TOKEN_CONFIG.name,
+            data_status: mode === "pre-launch" ? "awaiting-launch" : (priceSol > 0 ? "live" : "unavailable"),
+            last_checked: new Date(now).toISOString(),
             price_sol: priceSol.toString(),
             market_cap_sol: marketCapSol.toString(),
             curve_progress: curveProgress.toString(),
@@ -194,8 +178,10 @@ export const handler: Handler = async () => {
         const pricePoint = JSON.stringify({ t: now, price_sol: priceSol });
         const mcapPoint = JSON.stringify({ t: now, market_cap_sol: marketCapSol });
 
-        await redis.zadd(redisKeys.tsPrice, { score: now, member: pricePoint });
-        await redis.zadd(redisKeys.tsMcap, { score: now, member: mcapPoint });
+        if (mode !== "pre-launch" && priceSol > 0) {
+            await redis.zadd(redisKeys.tsPrice, { score: now, member: pricePoint });
+            await redis.zadd(redisKeys.tsMcap, { score: now, member: mcapPoint });
+        }
 
         // --- MILESTONE TRACKING (Additive - for Agent historical context) ---
         // Update ATH curve progress if current is higher
@@ -233,6 +219,7 @@ export const handler: Handler = async () => {
             body: JSON.stringify({ ok: true, mode, priceSol, marketCapSol, curveProgress })
         };
     } catch (e) {
+        await redis.hset(redisKeys.summary, { data_status: "unavailable", last_checked: new Date().toISOString() });
         console.error("Error in AMM poller:", e);
         return {
             statusCode: 500,

@@ -1,34 +1,18 @@
 import React, { useState, useEffect } from 'react';
 
 const HAUNTED_PHRASES = [
-    "This garden may be tended by any hand—because anyone can scatter seeds.",
-    "Viewer discretion advised: this patch of dirt is shared soil.",
-    "Expect the unexpected. Growth here is in everyone’s hands.",
-    "Remember: in this garden, anyone can reshape the landscape. Surprises may bloom.",
-    "Warning: control is a shared illusion here. Any gardener can change the plot.",
-    "Heads up: this patch of dirt is a common ground. What grows next is anyone’s guess.",
-    "In this field, the seeds are open to all. The harvest? A collective mystery.",
-    "In this shared soil, ownership is fluid. What you see growing now may not be what you see tomorrow.",
-    "Keep in mind: here, the garden’s design can flip at any moment. Every visitor holds a trowel.",
-    "This is a field for all. Expect the landscape to change in unexpected ways.",
-    "Here, the power is crowd-sourced. Today’s garden could become tomorrow’s wild meadow.",
-    "Note: the only constant here is change. Control is just a passing breeze.",
-    "As you watch, remember: every gardener is a potential storyteller. The plot is always up for grabs.",
-    "Welcome to the experiment: today’s field is a shared creation, and the harvest is anyone’s to shape.",
-    "This patch of dirt is an open bed—its seeds may scatter to any wind.",
-    "Seeds in this soil are wanderers. They might take root elsewhere without warning.",
-    "Inside this dirt, stability is a myth. Seeds may sprout or vanish like morning dew.",
-    "Note: every seed here is a free spirit. Growth is a temporary guest.",
-    "Think of this soil as a shared garden bed—anyone can plant, and anyone can harvest.",
-    "Remember: these seeds are travelers. They may find new ground at any time.",
-    "In this space, seeds may be gifted or gone with a single breeze.",
-    "Consider this garden bed a shared canvas. The picture of its growth is ever-changing.",
-    "Heads up: the seeds here are like whispers in the soil—always in motion, never truly owned.",
-    "Here, seeds are like nomads. They may settle briefly but are free to roam.",
-    "Remember: the growth in this garden is a collective story. Anyone can rewrite a chapter.",
-    "In this experiment, the seeds’ fate is open-ended. Each day is a new possibility.",
-    "Think of these seeds as puzzle pieces shared by all. The final garden is anyone’s guess.",
-    "This field’s harvest is a shared adventure. Every seed sown is a new chapter waiting to unfold."
+    "Nothing has moved. The record is still becoming.",
+    "The first mark has not been made. The surface is listening.",
+    "A public address waits. Attention gathers around an unopened event.",
+    "The numbers are quiet. The apparatus is awake.",
+    "Before movement, there is only the shape movement will leave behind.",
+    "The seed is visible. Its consequence is not.",
+    "No signal has arrived. The receiver remains on.",
+    "What begins here will remain legible after the moment passes.",
+    "The ledger does not anticipate. It remembers.",
+    "Visibility comes first. Meaning follows the trace.",
+    "The field is empty enough to show the first footprint.",
+    "When the number changes, the story becomes evidence."
 ];
 
 export const HauntedMarquee: React.FC = () => {

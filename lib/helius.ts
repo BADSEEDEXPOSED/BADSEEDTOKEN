@@ -61,7 +61,7 @@ export async function getTokenSupply(mint: string): Promise<number> {
         return result.value.uiAmount || 0;
     } catch (e) {
         console.warn(`Error fetching supply for ${mint}:`, e);
-        return 1000000000; // Fallback to 1B
+        throw new Error("Token supply unavailable");
     }
 }
 
@@ -75,12 +75,11 @@ export async function getTokenBalance(wallet: string, mint: string): Promise<num
         ]);
 
         if (result.value && result.value.length > 0) {
-            return result.value[0].account.data.parsed.info.tokenAmount.uiAmount || 0;
+            return result.value.reduce((sum, entry) => sum + (entry.account.data.parsed.info.tokenAmount.uiAmount || 0), 0);
         }
         return 0;
     } catch (e) {
-        console.warn(`Error fetching balance for ${wallet}:`, e);
-        return 0;
+        throw new Error("Token balance unavailable");
     }
 }
 
@@ -90,31 +89,15 @@ export async function getPumpAmmMetrics() {
 }
 
 /** Real implementation using Jupiter Price API for post-migration data */
-export async function getRaydiumMetrics() {
-    try {
-        const MINT = "3HPpMLK7LjKFqSnCsBYNiijhNTo7dkkx3FCSAHKSpump";
-        // Fetch price in SOL (vsToken = wSOL)
-        // wSOL = So11111111111111111111111111111111111111112
-        const url = `https://api.jup.ag/price/v2?ids=${MINT}&vsToken=So11111111111111111111111111111111111111112`;
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Jupiter API failed");
-
-        const json = await res.json();
-        const data = json.data[MINT];
-
-        if (!data || !data.price) {
-            return { priceSol: 0, marketCapSol: 0 };
-        }
-
-        const priceSol = parseFloat(data.price);
-        // Standard supply is 1B for Pump.fun tokens
-        const marketCapSol = priceSol * 1000000000;
-
-        return { priceSol, marketCapSol };
-
-    } catch (e) {
-        console.warn("Error fetching Raydium/Jupiter metrics:", e);
-        return { priceSol: 0, marketCapSol: 0 };
-    }
+export async function getPumpSwapMetrics() {
+    const { TOKEN_CONFIG } = await import("./tokenConfig");
+    const res = await fetch(`https://api.dexscreener.com/token-pairs/v1/solana/${TOKEN_CONFIG.mint}`, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) throw new Error("Market provider unavailable");
+    const pairs = await res.json();
+    const pair = pairs.filter((p: any) => p.baseToken?.address === TOKEN_CONFIG.mint && p.quoteToken?.address === "So11111111111111111111111111111111111111112")
+        .sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
+    const priceSol = Number(pair?.priceNative);
+    if (!(priceSol > 0)) throw new Error("No funded SOL market available");
+    const supply = await getTokenSupply(TOKEN_CONFIG.mint);
+    return { priceSol, marketCapSol: priceSol * supply };
 }

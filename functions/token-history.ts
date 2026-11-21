@@ -29,8 +29,8 @@ export const handler: Handler = async () => {
         ]);
 
         // Parse time series data
-        const parse = (arr: string[]) => (arr || []).map((x) => {
-            try { return JSON.parse(x); } catch { return null; }
+        const parse = (arr: unknown[]) => (arr || []).map((x) => {
+            try { return typeof x === "string" ? JSON.parse(x) : x; } catch { return null; }
         }).filter(Boolean);
 
         const prices = parse(priceRaw);
@@ -59,19 +59,9 @@ export const handler: Handler = async () => {
             athCurveProgress = currentCurveProgress;
         }
 
-        // Calculate today's volume (simplified: count of price points today * avg change)
+        // Count today's observations. Price movement is not trading volume.
         const todayStart = new Date().setHours(0, 0, 0, 0);
         const todayPrices = prices.filter(p => p.t >= todayStart);
-
-        // Rough volume estimate based on price movement variance
-        let todayVolumeSol = 0;
-        if (todayPrices.length > 1) {
-            const priceChanges = todayPrices.slice(1).map((p, i) =>
-                Math.abs(p.price_sol - todayPrices[i].price_sol)
-            );
-            // Sum of absolute changes * multiplier as rough volume proxy
-            todayVolumeSol = priceChanges.reduce((a, b) => a + b, 0) * 1000000;
-        }
 
         // Get total fees claimed
         const totalFeesClaimed = parseFloat(summary.total_fees_claimed_sol || "0");
@@ -108,8 +98,7 @@ export const handler: Handler = async () => {
             total_fees_claimed_sol: totalFeesClaimed,
             total_donated_sol: totalDonated,
 
-            // Today's activity (estimated)
-            today_volume_estimate_sol: todayVolumeSol,
+            today_volume_estimate_sol: null,
             today_data_points: todayPrices.length,
 
             // Data health
@@ -143,7 +132,8 @@ export const handler: Handler = async () => {
             statusCode: 500,
             headers: {
                 "Access-Control-Allow-Origin": "*",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store"
             },
             body: JSON.stringify({
                 error: "Failed to retrieve historical data",

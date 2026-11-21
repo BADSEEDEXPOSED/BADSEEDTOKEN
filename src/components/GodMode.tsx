@@ -37,7 +37,7 @@ export const GodMode: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             // For now, we try localhost:8888 first, or fallback to current origin if proxied.
             const voiceUrl = window.location.hostname === 'localhost'
                 ? 'http://localhost:8888/.netlify/functions/prophecy-get'
-                : 'https://badseed-exposed.netlify.app/.netlify/functions/prophecy-get'; // Fallback
+                : 'https://badseed.exposed/.netlify/functions/prophecy-get'; // Fallback
 
             try {
                 const propRes = await fetch(voiceUrl);

@@ -21,13 +21,13 @@ export function ReservesHUD({ data }: Props) {
             <div className="hud-grid">
                 {/* 1. Total Supply */}
                 <div className="hud-item">
-                    <span className="hud-label">TOTAL SUPPLY</span>
+                    <span className="hud-label">{data.mode === "pre-launch" ? "PLANNED SUPPLY" : "TOTAL SUPPLY"}</span>
                     <span className="hud-value">{formatSupply(data.supply_total)}</span>
                 </div>
 
                 {/* 2. Community Held */}
                 <div className="hud-item">
-                    <span className="hud-label">COMMUNITY</span>
+                    <span className="hud-label">{data.mode === "pre-launch" ? "COMMUNITY / WAITING" : "COMMUNITY"}</span>
                     <span className="hud-value">{formatSupply(data.supply_community)}</span>
                 </div>
 
@@ -42,7 +42,7 @@ export function ReservesHUD({ data }: Props) {
                 {/* 4. Burnt */}
                 <div className="hud-item" style={{ borderColor: "rgba(255,50,50,0.3)" }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                        <span className="hud-label" style={{ color: "#ff6666", marginBottom: 0 }}>BURNT 🔥</span>
+                        <span className="hud-label" style={{ color: "#ff6666", marginBottom: 0 }}>BURN ADDRESS</span>
                         <span style={{ fontSize: '8px', opacity: 0.5, fontFamily: 'monospace', color: '#ff6666' }}>
                             (1111...1111)
                         </span>

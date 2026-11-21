@@ -16,7 +16,7 @@ export const handler: Handler = async (event) => {
             redis.zrange<string[]>(redisKeys.tsDonationsCum, from, to, { byScore: true }).catch(() => [])
         ]);
 
-        const parse = (arr: string[]) => (arr || []).map((x) => JSON.parse(x));
+        const parse = (arr: string[]) => (arr || []).map((x) => typeof x === "string" ? JSON.parse(x) : x);
 
         const response = {
             price: parse(priceRaw),

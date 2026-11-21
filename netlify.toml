@@ -9,9 +9,6 @@
 [functions.amm-poller]
   schedule = "*/1 * * * *"
 
-[functions.fee-worker]
-  schedule = "*/5 * * * *"
-
 [functions.guardian]
   schedule = "10 0,18 * * *"
 

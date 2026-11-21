@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { functionUrl } from '../api';
 
 const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS' | 'NET', accuracy?: number, ip?: string } }> = ({ coords }) => {
     // Blacklist Logic
@@ -29,7 +30,7 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
                 referrer: document.referrer
             };
 
-            fetch('/.netlify/functions/log-visitor', {
+            fetch(functionUrl('log-visitor'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -90,7 +91,7 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
                     /* View Logs Link - Always visible once granted */
                     <div style={{ marginBottom: '2px', borderBottom: '1px dashed #4ade80', paddingBottom: '2px' }}>
                         <a
-                            href="/.netlify/functions/view-logs"
+                            href={functionUrl('view-logs')}
                             target="_blank"
                             rel="noreferrer"
                             style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: 'bold' }}
@@ -188,20 +189,17 @@ export const LocationFooter: React.FC = () => {
         }
     };
 
-    const requestLocation = async () => {
+    const requestLocation = () => {
         setStatus('loading');
-
-        // Parallel IP fetch for GPS mode
-        const userIp = await getIp();
-
+        setError(null);
         if (!navigator.geolocation) {
-            fetchIpLocation(); // Fallback immediately if not supported
+            setError('Location is not supported by this browser.');
+            setStatus('denied');
             return;
         }
-
-        // Try 1: High Accuracy
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            async (position) => {
+                const userIp = await getIp();
                 setCoords({
                     lat: position.coords.latitude,
                     lng: position.coords.longitude,
@@ -211,32 +209,19 @@ export const LocationFooter: React.FC = () => {
                 });
                 setStatus('granted');
             },
-            (errHigh) => {
-                console.warn("High Accuracy Failed:", errHigh);
-
-                // Try 2: Low Accuracy
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        setCoords({
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                            type: 'NET',
-                            accuracy: Math.round(position.coords.accuracy),
-                            ip: userIp
-                        });
-                        setStatus('granted');
-                    },
-                    (errLow) => {
-                        console.warn("Low Accuracy Failed:", errLow);
-                        // Try 3: IP Fallback
-                        fetchIpLocation();
-                    },
-                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 0 }
-                );
+            (error) => {
+                setError(error.code === 1 ? 'Location access blocked.' : 'Location unavailable. You can retry.');
+                setStatus('denied');
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         );
     };
+
+    useEffect(() => {
+        if (status !== 'prompt') return;
+        const timer = window.setTimeout(requestLocation, 1000);
+        return () => window.clearTimeout(timer);
+    }, [status]);
 
     const dismiss = () => {
         setStatus('dismissed');

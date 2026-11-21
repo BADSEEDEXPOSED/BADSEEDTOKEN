@@ -8,7 +8,7 @@ export const handler: Handler = async (event) => {
     const limit = query.limit ? Number(query.limit) : 50;
 
     const raw = await redis.zrange<string[]>(redisKeys.tsFeesCum, 0, limit - 1, { rev: true });
-    const items = raw.map((v: string) => JSON.parse(v));
+    const items = raw.map((v: string) => typeof v === "string" ? JSON.parse(v) : v);
 
     return {
         statusCode: 200,

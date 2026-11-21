@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { functionUrl } from '../api';
 
 type Candle = {
     t: string;
@@ -8,6 +9,8 @@ type Candle = {
     c: number;
     v: number;
 };
+
+type PricePoint = { t: number; price_sol: number };
 
 // Simple SVG Sparkline with Placeholder Support
 const Sparkline: React.FC<{ data: Candle[] }> = ({ data }) => {
@@ -94,18 +97,26 @@ const Ticker: React.FC<{ items?: string[] }> = ({ items }) => {
     return <div className="small fade-text in" style={{ minHeight: '20px' }}>{msg}</div>;
 };
 
-export const BitQueryHUD: React.FC<{ recentActivity?: string[]; style?: React.CSSProperties }> = ({ recentActivity, style }) => {
+export const BitQueryHUD: React.FC<{ recentActivity?: string[]; status?: string; style?: React.CSSProperties }> = ({ recentActivity, status = "awaiting-launch", style }) => {
     const [chartData, setChartData] = useState<Candle[]>([]);
     // Default loading to TRUE, but we render Placeholder if loading is done and data is empty.
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
         try {
-            const res = await fetch('/.netlify/functions/bitquery-poller');
-            if (res.status === 404) throw new Error("Local Dev - Function not found");
+            const res = await fetch(functionUrl('metrics'));
+            if (!res.ok) throw new Error("Market history unavailable");
             const json = await res.json();
-            if (json.ok && json.chart && json.chart.length > 0) {
-                setChartData(json.chart);
+            const points = (json.price || []) as PricePoint[];
+            if (points.length > 0) {
+                setChartData(points.map(point => ({
+                    t: new Date(point.t).toISOString(),
+                    o: point.price_sol,
+                    h: point.price_sol,
+                    l: point.price_sol,
+                    c: point.price_sol,
+                    v: 0
+                })));
             } else {
                 setChartData([]); // Explicitly empty
             }
@@ -119,7 +130,7 @@ export const BitQueryHUD: React.FC<{ recentActivity?: string[]; style?: React.CS
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 10 * 60 * 1000);
+        const interval = setInterval(fetchData, 60 * 1000);
         return () => clearInterval(interval);
     }, []);
 
@@ -145,7 +156,7 @@ export const BitQueryHUD: React.FC<{ recentActivity?: string[]; style?: React.CS
     return (
         <div className="hud-panel bitquery-panel" style={{ ...defaultStyle, ...style }}>
             <div style={{ flex: 1 }}>
-                <div className="label small muted" style={{ marginBottom: '8px' }}>MARKET TELEMETRY (24H)</div>
+                <div className="label small muted" style={{ marginBottom: '8px' }}>ON-CHAIN PRICE TRACE (24H)</div>
                 {/* Always render Sparkline now, it handles the Empty/Loading state internally */}
                 <Sparkline data={chartData} />
             </div>
@@ -154,8 +165,9 @@ export const BitQueryHUD: React.FC<{ recentActivity?: string[]; style?: React.CS
 
             <div style={{ flex: 1 }}>
                 <div className="label small muted">LIVE FEED</div>
-                <div className="small" style={{ color: '#86efac', marginTop: '4px' }}>
-                    ● System Online
+                <div className={`small system-state ${status}`}>
+                    <span className="status-glyph" aria-hidden="true" />
+                    {status === "live" ? "LIVE SIGNAL" : status === "delayed" ? "SIGNAL DELAYED" : "LAUNCH WATCH"}
                 </div>
                 <div className="small muted" style={{ fontSize: '10px' }}>
                     <Ticker items={recentActivity} />

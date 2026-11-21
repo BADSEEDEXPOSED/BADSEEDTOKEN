@@ -7,7 +7,11 @@ import { ENV } from "@lib/env";
 export const handler: Handler = async (event) => {
     // 1. Secure Authentication (Timing-Safe)
     const authHeader = event.headers["authorization"] || "";
-    const expectedSecret = ENV.WEBHOOK_AUTH_TOKEN || "superfancysecretbadseed";
+    const expectedSecret = ENV.WEBHOOK_AUTH_TOKEN;
+    if (!expectedSecret) {
+        console.error("WEBHOOK_AUTH_TOKEN is not configured");
+        return { statusCode: 503, body: "Webhook unavailable" };
+    }
 
     const received = Buffer.from(authHeader);
     const expected = Buffer.from(expectedSecret);
@@ -37,6 +41,11 @@ export const handler: Handler = async (event) => {
         let lastSignature = null;
 
         for (const tx of transactions) {
+            if (!tx?.signature) continue;
+            // Helius retries deliveries. Claim each signature once so retries cannot
+            // inflate donation totals or order-flow counts.
+            const claimed = await redis.set(`token:WEBHOOK_SEEN_V1:${tx.signature}`, "1", { nx: true, ex: 7 * 86400 });
+            if (!claimed) continue;
             let txSol = 0;
 
             // STRATEGY 1: Balance Delta (Accurate)
@@ -73,11 +82,11 @@ export const handler: Handler = async (event) => {
             // Enhanced Logic: Analyze Volume & Direction via AccountData
             if (tx.accountData && Array.isArray(tx.accountData)) {
                 // Find the user who paid for the tx (likely the trader)
-                const trader = tx.accountData.find(a => a.account === tx.feePayer);
+                const trader = tx.accountData.find((a: any) => a.account === tx.feePayer);
 
                 if (trader && trader.tokenBalanceChanges && Array.isArray(trader.tokenBalanceChanges)) {
                     // Check if this trader traded OUR token
-                    const tokenChange = trader.tokenBalanceChanges.find(t => t.mint === TOKEN_CONFIG.mint);
+                    const tokenChange = trader.tokenBalanceChanges.find((t: any) => t.mint === TOKEN_CONFIG.mint);
 
                     if (tokenChange) {
                         const rawAmount = tokenChange.rawTokenAmount ? parseFloat(tokenChange.rawTokenAmount.tokenAmount) : 0;
@@ -91,21 +100,20 @@ export const handler: Handler = async (event) => {
                         const absAmount = Math.abs(changeAmount);
 
                         if (absAmount > 0) {
-                            let emoji = isBuy ? "🟢" : "🔴";
-                            let action = isBuy ? "Buy" : "Sell";
-
-                            // Whale Alert (>1M Tokens)
-                            if (absAmount > 1000000) {
-                                emoji = isBuy ? "🐳" : "🦈";
-                                action = isBuy ? "Whale Buy" : "Whale Dump";
-                            }
-
-                            const msg = `${emoji} ${action}: ${absAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${TOKEN_CONFIG.symbol}`;
-
-                            // Push to Redis
+                            const action = isBuy ? "Buy" : "Sell";
+                            const msg = `${action}: ${absAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${TOKEN_CONFIG.symbol}`;
                             const key = `token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`;
                             await redis.lpush(key, msg);
                             await redis.ltrim(key, 0, 9);
+
+                            const traderSolDelta = Number(trader.nativeBalanceChange || 0) / 1e9;
+                            const eventTime = Number(tx.timestamp || Math.floor(Date.now() / 1000)) * 1000;
+                            const activity = { signature: tx.signature, timestamp: eventTime, side: isBuy ? "buy" : "sell",
+                                token_amount: absAmount, sol_amount: traderSolDelta ? Math.abs(traderSolDelta) : null,
+                                maker: tx.feePayer || "", tier: absAmount > 1000000 ? "large" : "standard" };
+                            const activityKey = `token:ACTIVITY_V2:${TOKEN_CONFIG.mint}`;
+                            await redis.zadd(activityKey, { score: eventTime, member: JSON.stringify(activity) });
+                            await redis.zremrangebyscore(activityKey, 0, Date.now() - 7 * 86400000);
 
                             console.log(`[Ticker] ${msg}`);
                         }

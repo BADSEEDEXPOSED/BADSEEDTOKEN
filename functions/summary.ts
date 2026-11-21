@@ -8,7 +8,7 @@ export const handler: Handler = async () => {
         const summary = (await redis.hgetall<Record<string, string>>(redisKeys.summary).catch(() => null)) || {};
 
         const INIT_PRICE = 0.000000028; // 30 SOL / 1B Tokens
-        const INIT_MCAP = 28; // 28-30 SOL approx
+        const INIT_MCAP = INIT_PRICE * 1_000_000_000;
 
         // Determining Mode First
         const mode = summary.mode || "pre-launch"; // Default to pre-launch if cold
@@ -23,8 +23,11 @@ export const handler: Handler = async () => {
             name: TOKEN_CONFIG.name,
             creator_wallet: TOKEN_CONFIG.creatorWallet,
             donation_wallet: TOKEN_CONFIG.donationWallet,
-            price_sol: price_sol,
-            market_cap_sol: market_cap_sol,
+            data_status: summary.data_status || "unverified",
+            last_checked: summary.last_checked || null,
+            stale: !summary.last_checked || Date.now() - Date.parse(summary.last_checked) > 180000,
+            price_sol: mode === "pre-launch" ? null : price_sol,
+            market_cap_sol: mode === "pre-launch" ? null : market_cap_sol,
             curve_progress: parseFloat(summary.curve_progress || "0"),
             total_fees_claimed_sol: parseFloat(summary.total_fees_claimed_sol || "0"),
             total_donated_sol: parseFloat(summary.total_donated_sol || "0"),
@@ -76,8 +79,10 @@ export const handler: Handler = async () => {
                 name: TOKEN_CONFIG.name,
                 creator_wallet: TOKEN_CONFIG.creatorWallet,
                 donation_wallet: TOKEN_CONFIG.donationWallet,
-                price_sol: 0.000000028,
-                market_cap_sol: 28,
+                data_status: "unavailable",
+                stale: true,
+                price_sol: null,
+                market_cap_sol: null,
                 curve_progress: 0,
                 total_fees_claimed_sol: 0,
                 total_donated_sol: 0,

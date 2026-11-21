@@ -1,124 +1,29 @@
-import React from 'react';
-import { BitQueryHUD } from './BitQueryHUD';
+import React from "react";
+import { BitQueryHUD } from "./BitQueryHUD";
 
-const SidePillar: React.FC<{
-    title: string;
-    children: React.ReactNode;
-    align: 'left' | 'right';
-    active: boolean;
-}> = ({ title, children, align, active }) => (
-    <div
-        className={`side-pillar ${align} ${active ? 'active' : ''}`}
-        style={{
-            // Keep specific positioning inline or let CSS handle via classes .left/.right? 
-            // CSS classes are better for responsive overrides.
-            // I'll define .side-pillar.left and .side-pillar.right in CSS.
-        }}
-    >
-        <div className="label small muted" style={{
-            textTransform: 'uppercase',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
-            paddingBottom: '8px',
-            marginBottom: '4px',
-            letterSpacing: '1px',
-            fontSize: '10px',
-            textAlign: 'center'
-        }}>
-            {title}
-        </div>
+export type Activity = { signature: string; timestamp: number; side: "buy" | "sell"; token_amount: number; sol_amount: number | null; maker: string; tier: "standard" | "large" };
+export type MarketSnapshot = { status: "awaiting-launch" | "live" | "delayed"; provider: string; measured_at: string; price_usd: number | null; liquidity_usd: number | null; fdv_usd: number | null; market_cap_usd: number | null; volume_24h_usd: number | null; price_change_24h_pct: number | null; trades_24h: number; buys_24h: number; sells_24h: number; makers_24h: number | null; measured_volume_24h_sol: number | null; recent_activity: Activity[] };
+const formatUsd = (value: number | null) => value == null ? "WAITING" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: value >= 10000 ? "compact" : "standard", maximumFractionDigits: value < 1 ? 4 : 1 }).format(value);
+const SidePillar: React.FC<{ title: string; children: React.ReactNode; align: "left" | "right"; active: boolean }> = ({ title, children, align, active }) => <div className={`side-pillar ${align} ${active ? "active" : "standby"}`}><div className="label pillar-title">{title}</div><div className="pillar-content">{children}</div></div>;
+const StatRow: React.FC<{ label: string; value: string; tone?: "rise" | "fall" | "neutral" }> = ({ label, value, tone = "neutral" }) => <div className="telemetry-row"><span>{label}</span><strong className={tone}>{value}</strong></div>;
 
-        {/* Content Container */}
-        <div className="pillar-content" style={{
-            flex: 1,
-            display: 'flex',
-            // flexDirection handled in CSS for responsive layout
-            gap: '12px'
-        }}>
-            {children}
-        </div>
-    </div>
-);
-
-const StatRow: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color = '#fff' }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '8px' }}>
-        <span className="small muted" style={{ fontSize: '9px' }}>{label}</span>
-        <span style={{ fontWeight: 600, color, fontFamily: 'monospace', fontSize: '11px' }}>{value}</span>
-    </div>
-);
-
-export const CommandCenterHUD: React.FC<{ recentActivity?: string[]; mode?: string }> = ({ recentActivity, mode }) => {
-    // Logic: Always "Active" if we have activity, or if mode is appropriate.
-    // User wants "Real Data now".
-    const hasData = recentActivity && recentActivity.length > 0;
-    const isActive = true; // Always show frame as active/armed per request "not dark/blurred"
-
-    // Parse recentActivity for Volume/Counts
-    let buyCount = 0;
-    let sellCount = 0;
-
-    if (recentActivity) {
-        recentActivity.forEach(msg => {
-            if (msg.includes("Buy") || msg.includes("🟢") || msg.includes("🐳")) buyCount++;
-            if (msg.includes("Sell") || msg.includes("🔴") || msg.includes("🦈")) sellCount++;
-        });
-    }
-
-    const totalOrders = buyCount + sellCount;
-    const buyPct = totalOrders > 0 ? Math.round((buyCount / totalOrders) * 100) : 50; // Default to 50 if no data
-    const sellPct = totalOrders > 0 ? 100 - buyPct : 50;
-
-    // Safely extract last amount to avoid Type Error
-    let lastAmt = "---";
-    if (recentActivity && recentActivity.length > 0) {
-        const parts = recentActivity[0].split(':');
-        if (parts.length > 1) {
-            lastAmt = parts[1].trim();
-        }
-    }
-
-    const txCount = recentActivity?.length || 0;
-
-    return (
-        <div className="command-center-hud">
-            {/* Left Pillar: Market Stats */}
-            <SidePillar title="Telemetry" align="left" active={isActive}>
-                {/* We don't have Pump.fun volume yet, so keep these as placeholders or hook up to summary logic later */}
-                <StatRow label="24h Volume" value="---" color="#86efac" />
-                <StatRow label="Liquidity" value="---" color="#60a5fa" />
-                <StatRow label="FDV" value="---" />
-                <StatRow label="Mkt Cap" value="---" />
-
-                <div style={{ marginTop: 'auto', paddingTop: '8px', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-                    <div className="small muted" style={{ marginBottom: '4px', fontSize: '9px' }}>Trend (24h)</div>
-                    <div style={{ height: '4px', width: '100%', background: '#333', borderRadius: '2px' }}>
-                        {/* Flat line for now */}
-                    </div>
-                </div>
-            </SidePillar>
-
-            {/* Center: The Main BitQuery HUD - Active Always (Armed) */}
-            <BitQueryHUD recentActivity={recentActivity} style={{ width: '480px', maxWidth: '100%' }} />
-
-            {/* Right Pillar: Trader Analysis */}
-            <SidePillar title="Order Flow" align="right" active={isActive}>
-                {/* Show simplified Order Flow */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span className="small" style={{ color: '#4ade80', fontSize: '9px' }}>B: {hasData ? buyPct : "--"}%</span>
-                    <span className="small" style={{ color: '#f87171', fontSize: '9px' }}>S: {hasData ? sellPct : "--"}%</span>
-                </div>
-                <div style={{ width: '100%', height: '4px', background: '#333', borderRadius: '2px', overflow: 'hidden', display: 'flex', marginBottom: '12px' }}>
-                    <div style={{ width: `${buyPct}%`, background: '#4ade80', transition: 'width 0.5s ease' }}></div>
-                    <div style={{ width: `${sellPct}%`, background: '#f87171', transition: 'width 0.5s ease' }}></div>
-                </div>
-
-                <StatRow label="Tx Count" value={txCount.toString()} color="#fff" />
-                <StatRow label="Last Amt" value={lastAmt} color="#fff" />
-                <StatRow label="Makers" value="---" />
-
-                <div style={{ marginTop: 'auto', textAlign: 'right' }}>
-                    <span className="small muted" style={{ fontSize: '8px' }}>REAL-TIME STREAM</span>
-                </div>
-            </SidePillar>
-        </div>
-    );
+export const CommandCenterHUD: React.FC<{ market: MarketSnapshot | null; mode?: string; stale?: boolean }> = ({ market, mode, stale }) => {
+    const active = mode !== "pre-launch" && market?.status === "live" && !stale;
+    const total = (market?.buys_24h || 0) + (market?.sells_24h || 0);
+    const buyPct = total ? Math.round(((market?.buys_24h || 0) / total) * 100) : null;
+    const sellPct = buyPct == null ? null : 100 - buyPct;
+    const trend = market?.price_change_24h_pct;
+    const recent = market?.recent_activity || [];
+    const latest = recent[0];
+    const feed = recent.map(item => `${item.tier === "large" ? "LARGE " : ""}${item.side.toUpperCase()}  ${item.token_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} BADSEED`);
+    return <div className="command-center-hud">
+        <SidePillar title="Market Signal" align="left" active={active}>
+            <StatRow label="24H Volume" value={formatUsd(market?.volume_24h_usd ?? null)} /><StatRow label="Liquidity" value={formatUsd(market?.liquidity_usd ?? null)} /><StatRow label="FDV" value={formatUsd(market?.fdv_usd ?? null)} /><StatRow label="Market Cap" value={formatUsd(market?.market_cap_usd ?? null)} /><StatRow label="24H Change" value={trend == null ? "WAITING" : `${trend > 0 ? "+" : ""}${trend.toFixed(2)}%`} tone={trend == null ? "neutral" : trend >= 0 ? "rise" : "fall"} />
+        </SidePillar>
+        <BitQueryHUD recentActivity={feed} status={market?.status || "awaiting-launch"} style={{ width: "480px", maxWidth: "100%" }} />
+        <SidePillar title="Order Flow" align="right" active={active}>
+            <div className="flow-readout"><span>B {buyPct == null ? "--" : buyPct}%</span><span>S {sellPct == null ? "--" : sellPct}%</span></div><div className="flow-track" aria-label={buyPct == null ? "Order flow awaiting trades" : `${buyPct}% buys and ${sellPct}% sells`}>{buyPct != null && <><i className="flow-buy" style={{ width: `${buyPct}%` }} /><i className="flow-sell" style={{ width: `${sellPct}%` }} /></>}</div>
+            <StatRow label="Trades / 24H" value={market ? String(market.trades_24h) : "WAITING"} /><StatRow label="Makers / 24H" value={market?.makers_24h == null ? "WAITING" : String(market.makers_24h)} /><StatRow label="Latest" value={latest ? `${latest.side.toUpperCase()} ${latest.token_amount.toLocaleString(undefined, { notation: "compact", maximumFractionDigits: 1 })}` : "WAITING"} /><div className="stream-source">{market?.provider === "dexscreener" ? "MARKET INDEX + CHAIN STREAM" : mode === "pre-launch" ? "ARMED FOR LAUNCH" : "CHAIN STREAM"}</div>
+        </SidePillar>
+    </div>;
 };

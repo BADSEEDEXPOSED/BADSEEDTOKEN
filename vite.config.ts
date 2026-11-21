@@ -7,7 +7,7 @@ export default defineConfig({
         port: 5173,
         proxy: {
             "/.netlify/functions": {
-                target: "https://badseedtoken.netlify.app",
+                target: "https://token.badseed.exposed",
                 changeOrigin: true,
                 secure: false
             },

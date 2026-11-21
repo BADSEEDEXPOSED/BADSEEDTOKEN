@@ -46,6 +46,7 @@ export class PumpFunSDK {
                 return null;
             }
 
+            if (!accountInfo.owner.equals(PUMP_PROGRAM_ID) || accountInfo.data.length < 49) throw new Error("Invalid bonding curve account");
             const data = accountInfo.data;
 
             // Skip 8 byte discriminator
@@ -78,8 +79,7 @@ export class PumpFunSDK {
             };
 
         } catch (e) {
-            console.error("Error fetching bonding curve:", e);
-            return null;
+            throw new Error("Bonding curve lookup failed");
         }
     }
 
