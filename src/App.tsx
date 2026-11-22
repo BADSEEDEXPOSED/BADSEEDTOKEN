@@ -501,7 +501,7 @@ const App: React.FC = () => {
 
 
 
-                <section className={`card notes-panel${(market?.dex_paid || (market?.dex_boosts && market.dex_boosts > 0)) ? ' has-dex-badges' : ''}`}>
+                <section className={`card notes-panel${Boolean(market?.dex_paid || (market?.dex_boosts ?? 0) > 0) ? ' has-dex-badges' : ''}`}>
                     <div className="label" style={{ justifyContent: 'center', paddingRight: '10px' }}>
                         <img
                             src={publicAssetUrl("badseed.gif")}
@@ -510,16 +510,16 @@ const App: React.FC = () => {
                         />
                     </div>
                     <RotatingNotes mode={summary.mode} />
-                    {(market?.dex_paid || (market?.dex_boosts && market.dex_boosts > 0)) && (
+                    {Boolean(market?.dex_paid || (market?.dex_boosts ?? 0) > 0) && (
                         <a
                             className="notes-dex-badges"
-                            href={market.pair_url || `https://dexscreener.com/solana/${summary.mint}`}
+                            href={market?.pair_url || `https://dexscreener.com/solana/${summary.mint}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             title="Verified on DexScreener"
                         >
-                            {market.dex_paid && <span className="dex-pill paid">DEX PAID ✓</span>}
-                            {market.dex_boosts && market.dex_boosts > 0 ? <span className="dex-pill boost">⚡ {market.dex_boosts} BOOST{market.dex_boosts === 1 ? '' : 'S'}</span> : null}
+                            {Boolean(market?.dex_paid) && <span className="dex-pill paid">DEX PAID ✓</span>}
+                            {(market?.dex_boosts ?? 0) > 0 && <span className="dex-pill boost">⚡ {market?.dex_boosts} BOOST{market?.dex_boosts === 1 ? '' : 'S'}</span>}
                         </a>
                     )}
                 </section>
