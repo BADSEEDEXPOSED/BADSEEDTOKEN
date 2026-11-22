@@ -259,8 +259,8 @@ body {
 .canonical-live-link {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  top: 6px;
+  transform: translateX(-50%);
   color: #dce4ec;
   font: 600 11px/1.2 "SFMono-Regular", Consolas, monospace;
   letter-spacing: .12em;
