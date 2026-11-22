@@ -2,21 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { functionUrl } from '../api';
 
 const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS' | 'NET', accuracy?: number, ip?: string } }> = ({ coords }) => {
-    // Blacklist Logic
-    const isBlacklistedIp = coords.ip === '184.65.126.30';
-    // Tolerance of ~0.05 degrees (approx 5km)
-    const isBlacklistedLoc = Math.abs(coords.lat - 49.0424) < 0.05 && Math.abs(coords.lng - (-122.2840)) < 0.05;
-    const isBlacklisted = isBlacklistedIp || isBlacklistedLoc;
-
-    const [visible, setVisible] = useState(false);
+    const isBlacklisted = false;
+    const [visible, setVisible] = useState(true);
     const [logged, setLogged] = useState(false);
     const [forceUnblur, setForceUnblur] = useState(false);
 
     useEffect(() => {
-        if (isBlacklisted) {
-            setVisible(true); // Show immediately if blacklisted (to be blurred)
-            return;
-        }
 
         // Non-blacklisted: Log the visit
         if (!logged) {
