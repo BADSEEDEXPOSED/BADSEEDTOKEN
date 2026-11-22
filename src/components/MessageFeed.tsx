@@ -39,8 +39,11 @@ export function MessageFeed() {
     let rafId = 0;
     let lastTime = performance.now();
     let pos = el.scrollTop;
-    let pauseUntil = performance.now() + 1200;
+    let phase: 'hold-top' | 'scrolling' | 'hold-bottom' = 'hold-top';
+    let phaseUntil = performance.now() + 8000;
     const SPEED_PX_PER_SEC = 18;
+    const TOP_HOLD_MS = 8000;
+    const BOTTOM_HOLD_MS = 1800;
 
     const tick = (now: number) => {
       const dt = Math.min(0.1, (now - lastTime) / 1000);
@@ -48,19 +51,32 @@ export function MessageFeed() {
 
       if (hoveredRef.current) {
         pos = el.scrollTop;
+        phase = 'scrolling';
       } else {
         const maxScroll = el.scrollHeight - el.clientHeight;
-        if (maxScroll > 2 && now >= pauseUntil) {
-          pos += SPEED_PX_PER_SEC * dt;
-          if (pos >= maxScroll) {
-            el.scrollTop = maxScroll;
+        if (maxScroll > 2) {
+          if (phase === 'hold-top') {
+            el.scrollTop = 0;
             pos = 0;
-            pauseUntil = now + 1800;
-          } else {
-            el.scrollTop = pos;
+            if (now >= phaseUntil) phase = 'scrolling';
+          } else if (phase === 'scrolling') {
+            pos += SPEED_PX_PER_SEC * dt;
+            if (pos >= maxScroll) {
+              el.scrollTop = maxScroll;
+              pos = maxScroll;
+              phase = 'hold-bottom';
+              phaseUntil = now + BOTTOM_HOLD_MS;
+            } else {
+              el.scrollTop = pos;
+            }
+          } else if (phase === 'hold-bottom') {
+            if (now >= phaseUntil) {
+              el.scrollTop = 0;
+              pos = 0;
+              phase = 'hold-top';
+              phaseUntil = now + TOP_HOLD_MS;
+            }
           }
-        } else if (maxScroll > 2 && pos === 0 && el.scrollTop > 0 && now >= pauseUntil - 400) {
-          el.scrollTop = 0;
         }
       }
 
