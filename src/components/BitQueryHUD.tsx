@@ -21,7 +21,9 @@ const Sparkline: React.FC<{ data: Candle[] }> = ({ data }) => {
     // Placeholder Data: A flat line or subtle pulse
     const renderData = isEmpty
         ? Array.from({ length: 24 }, (_, i) => ({ c: 50 + Math.sin(i) * 2 })) // Subtle wave
-        : data;
+        : data.length === 1
+            ? [data[0], data[0]]
+            : data;
 
     // Find min/max for scaling
     const prices = renderData.map(d => d.c);
@@ -130,7 +132,7 @@ export const BitQueryHUD: React.FC<{ recentActivity?: string[]; status?: string;
 
     useEffect(() => {
         fetchData();
-        const interval = setInterval(fetchData, 60 * 1000);
+        const interval = setInterval(fetchData, 10 * 1000);
         const onManualRefresh = () => { fetchData(); };
         window.addEventListener('badseed-refresh', onManualRefresh);
         return () => {
