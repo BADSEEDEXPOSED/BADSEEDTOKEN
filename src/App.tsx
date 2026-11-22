@@ -378,14 +378,14 @@ const App: React.FC = () => {
                         <h1>
                             {summary.name} <span className="muted">${summary.symbol}</span>
                         </h1>
-                        <div className="muted small" style={{ fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '11px', letterSpacing: '0.02em', wordBreak: 'break-all' }}>Mint: {summary.mint}</div>
+                        <div className="muted small" style={{ fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '10px', letterSpacing: '0.01em', wordBreak: 'break-all' }}>Mint: {summary.mint}</div>
                     </div>
                     <a className="canonical-live-link" href="https://badseed.exposed/live/">
                         badseed.exposed/live/
                     </a>
                     <div className="small right">
-                        <div>Creator: {shorten(summary.creator_wallet)}</div>
-                        <div>Donation: {shorten(summary.donation_wallet)}</div>
+                        <div style={{ fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '10px', letterSpacing: '0.01em', wordBreak: 'break-all' }}>Creator: {summary.creator_wallet}</div>
+                        <div style={{ fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '10px', letterSpacing: '0.01em', wordBreak: 'break-all' }}>Donation: {summary.donation_wallet}</div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', justifyContent: 'flex-end' }}>
                             {solPrice && (
                                 <div className="badge" style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#86efac', border: '1px solid rgba(134, 239, 172, 0.2)' }}>
