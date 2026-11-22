@@ -2,10 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { functionUrl } from '../api';
 
 const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS' | 'NET', accuracy?: number, ip?: string } }> = ({ coords }) => {
-    const isBlacklisted = false;
     const [visible, setVisible] = useState(true);
     const [logged, setLogged] = useState(false);
-    const [forceUnblur, setForceUnblur] = useState(false);
+    const [remoteUnblurred, setRemoteUnblurred] = useState(false);
+
+    useEffect(() => {
+        const pollBlur = async () => {
+            try {
+                const res = await fetch('https://badseed.exposed/.netlify/functions/dapp-config', { cache: 'no-store' });
+                if (res.ok) {
+                    const data = await res.json();
+                    setRemoteUnblurred(Boolean(data.locationUnblurred));
+                }
+            } catch {}
+        };
+        pollBlur();
+        const t = setInterval(pollBlur, 5000);
+        return () => clearInterval(t);
+    }, []);
+
+    const isBlacklisted = false;
+    const forceUnblur = remoteUnblurred;
+    const isBlurred = !remoteUnblurred;
 
     useEffect(() => {
 
@@ -73,9 +91,9 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
                 gap: '2px',
                 lineHeight: '1.2',
                 letterSpacing: '-0.5px',
-                filter: (isBlacklisted && !forceUnblur) ? 'blur(4px)' : 'none',
-                userSelect: (isBlacklisted && !forceUnblur) ? 'none' : 'auto',
-                pointerEvents: (isBlacklisted && !forceUnblur) ? 'none' : 'auto',
+                filter: isBlurred ? 'blur(5px)' : 'none',
+                userSelect: isBlurred ? 'none' : 'auto',
+                pointerEvents: isBlurred ? 'none' : 'auto',
                 transition: 'filter 0.3s ease'
             }}>
                 {!isBlacklisted && (
