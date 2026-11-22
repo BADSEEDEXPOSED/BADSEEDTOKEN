@@ -17,6 +17,16 @@
 <body>
     <div id="canvas-container"></div>
     <script type="module" src="js/main.js"></script>
+
+<style id="badseed-cursor-relay-style">@media (pointer: fine) { html, body, canvas, * { cursor: none !important; } }</style>
+<script id="badseed-cursor-relay">
+(function () {
+  if (window.parent === window) return;
+  window.addEventListener('mousemove', function (e) {
+    window.parent.postMessage({ type: 'badseed-cursor', x: e.clientX, y: e.clientY }, '*');
+  }, { passive: true });
+})();
+</script>
 </body>
 </html>
 

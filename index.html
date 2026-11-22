@@ -48,6 +48,21 @@
       var hit = !!(e.target && e.target.closest && e.target.closest(sel));
       if (hit !== active) { active = hit; img.src = active ? onSrc : offSrc; }
     }, { passive: true });
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.type !== 'badseed-cursor') return;
+      var iframes = document.querySelectorAll('iframe');
+      var ox = 0, oy = 0;
+      for (var i = 0; i < iframes.length; i++) {
+        if (iframes[i].contentWindow === e.source) {
+          var r = iframes[i].getBoundingClientRect();
+          ox = r.left; oy = r.top; break;
+        }
+      }
+      el.style.left = (ox + e.data.x) + 'px';
+      el.style.top = (oy + e.data.y) + 'px';
+      el.style.opacity = '1';
+      if (active) { active = false; img.src = offSrc; }
+    });
     document.addEventListener('mouseleave', function () { el.style.opacity = '0'; });
     document.addEventListener('mouseenter', function () { el.style.opacity = '1'; });
   }
