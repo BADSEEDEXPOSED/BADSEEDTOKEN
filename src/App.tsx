@@ -224,32 +224,46 @@ const App: React.FC = () => {
     const [market, setMarket] = useState<MarketSnapshot | null>(null);
     const [loading, setLoading] = useState(true);
     const [solPrice, setSolPrice] = useState<number | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchSolPrice = async () => {
+        try {
+            const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+            if (res.ok) {
+                const data = await res.json();
+                if (typeof data?.solana?.usd === "number") {
+                    setSolPrice(data.solana.usd);
+                    return;
+                }
+            }
+        } catch {}
+        try {
+            const res = await fetch("https://api.coinbase.com/v2/prices/SOL-USD/spot");
+            if (res.ok) {
+                const data = await res.json();
+                const amt = parseFloat(data?.data?.amount);
+                if (Number.isFinite(amt) && amt > 0) setSolPrice(amt);
+            }
+        } catch (e) {
+            console.error("Failed to fetch SOL price", e);
+        }
+    };
+
+    const handleManualRefresh = async () => {
+        if (refreshing) return;
+        setRefreshing(true);
+        try {
+            await fetch(functionUrl("amm-poller")).catch(() => {});
+            window.dispatchEvent(new Event("badseed-refresh"));
+            await Promise.all([fetchAll(), fetchSolPrice()]);
+        } finally {
+            setRefreshing(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchSolPrice = async () => {
-            try {
-                const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
-                if (res.ok) {
-                    const data = await res.json();
-                    if (typeof data?.solana?.usd === "number") {
-                        setSolPrice(data.solana.usd);
-                        return;
-                    }
-                }
-            } catch {}
-            try {
-                const res = await fetch("https://api.coinbase.com/v2/prices/SOL-USD/spot");
-                if (res.ok) {
-                    const data = await res.json();
-                    const amt = parseFloat(data?.data?.amount);
-                    if (Number.isFinite(amt) && amt > 0) setSolPrice(amt);
-                }
-            } catch (e) {
-                console.error("Failed to fetch SOL price", e);
-            }
-        };
         fetchSolPrice();
-        const interval = setInterval(fetchSolPrice, 60000); // Update every 60 seconds
+        const interval = setInterval(fetchSolPrice, 60000);
         return () => clearInterval(interval);
     }, []);
 
@@ -353,6 +367,24 @@ const App: React.FC = () => {
                                     summary.mode === "pre-launch" ? "Pre-Launch Phase" :
                                         "Bonding Curve Phase"}
                             </div>
+                            <button
+                                type="button"
+                                onClick={handleManualRefresh}
+                                disabled={refreshing}
+                                className="badge"
+                                style={{
+                                    cursor: refreshing ? 'wait' : 'pointer',
+                                    background: 'rgba(195, 216, 237, 0.12)',
+                                    border: '1px solid rgba(221, 234, 247, 0.5)',
+                                    color: '#eef5fc',
+                                    fontFamily: 'ui-monospace, Consolas, monospace',
+                                    letterSpacing: '0.1em',
+                                    opacity: refreshing ? 0.65 : 1
+                                }}
+                                title="Force live on-chain refresh of all panels"
+                            >
+                                {refreshing ? 'SYNCING...' : '↻ REFRESH'}
+                            </button>
                         </div>
                     </div>
                 </header>

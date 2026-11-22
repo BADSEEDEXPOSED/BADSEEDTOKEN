@@ -124,6 +124,10 @@ export const handler: Handler = async () => {
             getTokenBalance(TOKEN_CONFIG.donationWallet, TOKEN_CONFIG.mint),
             getTokenBalance(BURN_ADDRESS, TOKEN_CONFIG.mint)
         ]);
+        // Also count native SPL Token burns (which permanently reduce totalSupply below 1B)
+        if (mode !== "pre-launch" && totalSupply > 0 && totalSupply < 1000000000) {
+            burnBalance += (1000000000 - totalSupply);
+        }
 
         // 3. Calculate Community Holdings
         // Community = (Tokens Sold) - (Dev + Donation + Burn)

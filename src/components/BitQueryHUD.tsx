@@ -131,7 +131,12 @@ export const BitQueryHUD: React.FC<{ recentActivity?: string[]; status?: string;
     useEffect(() => {
         fetchData();
         const interval = setInterval(fetchData, 60 * 1000);
-        return () => clearInterval(interval);
+        const onManualRefresh = () => { fetchData(); };
+        window.addEventListener('badseed-refresh', onManualRefresh);
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener('badseed-refresh', onManualRefresh);
+        };
     }, []);
 
     const defaultStyle: React.CSSProperties = {

@@ -22,9 +22,12 @@ export function MessageFeed() {
     };
     refresh();
     const poll = window.setInterval(refresh, 20000);
+    const onManualRefresh = () => { refresh(); };
+    window.addEventListener('badseed-refresh', onManualRefresh);
     return () => {
       controller.abort();
       clearInterval(poll);
+      window.removeEventListener('badseed-refresh', onManualRefresh);
     };
   }, []);
 
