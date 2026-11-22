@@ -5,6 +5,7 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
     const [visible, setVisible] = useState(true);
     const [logged, setLogged] = useState(false);
     const [remoteUnblurred, setRemoteUnblurred] = useState(false);
+    const [localUnblurred, setLocalUnblurred] = useState(false);
 
     useEffect(() => {
         const pollBlur = async () => {
@@ -22,8 +23,7 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
     }, []);
 
     const isBlacklisted = false;
-    const forceUnblur = remoteUnblurred;
-    const isBlurred = !remoteUnblurred;
+    const isBlurred = !(remoteUnblurred || localUnblurred);
 
     useEffect(() => {
 
@@ -58,26 +58,24 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
 
     return (
         <React.Fragment>
-            {isBlacklisted && (
-                <button
-                    onClick={() => setForceUnblur(!forceUnblur)}
-                    style={{
-                        alignSelf: 'flex-start',
-                        background: 'transparent',
-                        border: 'none',
-                        color: '#4ade80',
-                        fontSize: '9px',
-                        cursor: 'pointer',
-                        padding: '2px',
-                        opacity: 0.5,
-                        marginBottom: '-4px', // Pull closer to the box
-                        zIndex: 101 // Above the box
-                    }}
-                    title="Toggle Visibility"
-                >
-                    {forceUnblur ? '👁️' : '🔒'}
-                </button>
-            )}
+            <button
+                onClick={() => setLocalUnblurred(!localUnblurred)}
+                style={{
+                    alignSelf: 'flex-start',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#9ab886',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    opacity: 0.75,
+                    marginBottom: '-4px',
+                    zIndex: 101
+                }}
+                title={isBlurred ? 'Click to unblur locally' : 'Click to blur locally'}
+            >
+                {isBlurred ? '🔒' : '👁️'}
+            </button>
             <div style={{
                 fontSize: '10px',
                 color: '#4ade80',
