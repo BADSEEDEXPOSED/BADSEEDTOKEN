@@ -376,9 +376,9 @@ const App: React.FC = () => {
                 <header className="header">
                     <div>
                         <h1>
-                            {summary.name} <span className="muted">({summary.symbol})</span>
+                            {summary.name} <span className="muted">${summary.symbol}</span>
                         </h1>
-                        <div className="muted small">Mint: {shorten(summary.mint)}</div>
+                        <div className="muted small" style={{ fontFamily: 'ui-monospace, Consolas, monospace', fontSize: '11px', letterSpacing: '0.02em', wordBreak: 'break-all' }}>Mint: {summary.mint}</div>
                     </div>
                     <a className="canonical-live-link" href="https://badseed.exposed/live/">
                         badseed.exposed/live/
