@@ -4,6 +4,12 @@ import { redis } from "@lib/redis";
 import { redisKeys, TOKEN_CONFIG } from "@lib/tokenConfig";
 import { ENV } from "@lib/env";
 
+// Derived on-chain Creator Vault PDAs for TOKEN_CONFIG.creatorWallet (9Tyz...XWdr)
+const CREATOR_VAULT_PDAS = new Set([
+    "7TZyvnv1Lx65QGiVXBBZLRf9djb7BcbaL8ZPJxyV8x9a", // Pump.fun creator-vault PDA
+    "8vkEnqKnDxvDscExjjtJzWs69SwfLqMK2GNPH96sQctL", // PumpSwap creator_vault PDA
+]);
+
 export const handler: Handler = async (event) => {
     // 1. Secure Authentication (Timing-Safe)
     const authHeader = event.headers["authorization"] || "";
@@ -38,6 +44,8 @@ export const handler: Handler = async (event) => {
 
         const summary = (await redis.hgetall<Record<string, string>>(redisKeys.summary)) || {};
         let donatedDelta = 0;
+        let feesClaimedDelta = 0;
+        let creatorToDonationDelta = 0;
         let lastSignature = null;
 
         for (const tx of transactions) {
@@ -76,6 +84,34 @@ export const handler: Handler = async (event) => {
             if (txSol > 0) {
                 donatedDelta += txSol;
                 lastSignature = tx.signature;
+                if (tx.feePayer === TOKEN_CONFIG.creatorWallet) {
+                    creatorToDonationDelta += txSol;
+                }
+            }
+
+            // STRATEGY 2B: Direct On-Chain Pump.fun / PumpSwap Creator Fee Claims
+            let claimedSol = 0;
+            if (Array.isArray(tx.nativeTransfers)) {
+                for (const transfer of tx.nativeTransfers) {
+                    if (
+                        CREATOR_VAULT_PDAS.has(transfer.fromUserAccount) &&
+                        transfer.toUserAccount === TOKEN_CONFIG.creatorWallet &&
+                        transfer.amount > 0
+                    ) {
+                        claimedSol += transfer.amount / 1e9;
+                    }
+                }
+            }
+            if (claimedSol === 0 && Array.isArray(tx.accountData)) {
+                for (const entry of tx.accountData) {
+                    if (CREATOR_VAULT_PDAS.has(entry.account) && entry.nativeBalanceChange < 0) {
+                        claimedSol += Math.abs(entry.nativeBalanceChange) / 1e9;
+                    }
+                }
+            }
+            if (claimedSol > 0) {
+                feesClaimedDelta += claimedSol;
+                console.log(`[CreatorFee] Detected +${claimedSol} SOL claimed in ${tx.signature}`);
             }
 
             // STRATEGY 3: Real-Time Order Flow (Capture Pump.fun & PumpSwap Buys/Sells)
@@ -133,9 +169,10 @@ export const handler: Handler = async (event) => {
             }
         }
 
-        if (donatedDelta > 0) {
+        if (donatedDelta > 0 || feesClaimedDelta > 0) {
             const existingDonated = parseFloat(summary.total_donated_sol || "0") || 0;
             const existingPreLaunch = parseFloat(summary.pre_launch_donated_sol || "0") || 0;
+            const existingFees = parseFloat(summary.total_fees_claimed_sol || "0") || 0;
             const currentMode = summary.mode || "pre-launch";
 
             const newDonated = existingDonated + donatedDelta;
@@ -144,22 +181,38 @@ export const handler: Handler = async (event) => {
                 newPreLaunch += donatedDelta;
             }
 
+            // Primary: direct on-chain Pump.fun / PumpSwap creator vault claims
+            // Fallback: post-launch transfers from creatorWallet -> donationWallet
+            let newFees = existingFees + feesClaimedDelta;
+            if (currentMode !== "pre-launch" && feesClaimedDelta === 0 && creatorToDonationDelta > 0) {
+                const postLaunchDonated = Math.max(0, newDonated - newPreLaunch);
+                if (postLaunchDonated > newFees) newFees = postLaunchDonated;
+            }
+
             await redis.hmset(redisKeys.summary, {
                 ...summary,
                 total_donated_sol: newDonated.toString(),
                 pre_launch_donated_sol: newPreLaunch.toString(),
+                total_fees_claimed_sol: newFees.toString(),
                 last_updated: new Date().toISOString()
             });
 
-            // Update the last signature so the fee-worker skips these on its next run
+            if (newFees > existingFees) {
+                const nowMs = Date.now();
+                await redis.zadd(redisKeys.tsFeesCum, {
+                    score: nowMs,
+                    member: JSON.stringify({ t: nowMs, fees_claimed_sol: newFees })
+                });
+            }
+
             if (lastSignature) {
                 await redis.set(`token:LAST_SIG_V2:${TOKEN_CONFIG.mint}`, lastSignature);
             }
 
-            console.log(`Webhook updated summary: +${donatedDelta} SOL`);
+            console.log(`Webhook updated summary: donated +${donatedDelta} SOL, fees +${feesClaimedDelta} SOL`);
         }
 
-        return { statusCode: 200, body: JSON.stringify({ ok: true, detected: donatedDelta }) };
+        return { statusCode: 200, body: JSON.stringify({ ok: true, detected: donatedDelta, feesClaimed: feesClaimedDelta }) };
     } catch (e) {
         console.error("Webhook processing error:", e);
         return { statusCode: 500, body: "Internal Server Error" };
