@@ -486,7 +486,7 @@ const App: React.FC = () => {
                     </div>
                     {/* Overlays / Siblings */}
                     <ReservesHUD data={summary} />
-                    <HauntedMarquee />
+                    <HauntedMarquee mode={summary.mode} />
                     <MessageFeed />
                     <CommandCenterHUD market={market} mode={summary?.mode} stale={summary?.stale} />
                 </section>

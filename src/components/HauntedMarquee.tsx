@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const HAUNTED_PHRASES = [
+const PRE_LAUNCH_PHRASES = [
     "Nothing has moved. The record is still becoming.",
     "The first mark has not been made. The surface is listening.",
     "A public address waits. Attention gathers around an unopened event.",
@@ -15,36 +15,53 @@ const HAUNTED_PHRASES = [
     "When the number changes, the story becomes evidence."
 ];
 
-export const HauntedMarquee: React.FC = () => {
+const LIVE_PHRASES = [
+    "The first mark has been made. The record is live.",
+    "The seed has broken ground. Every trade leaves a trace.",
+    "The bonding curve is active. Visibility has replaced trust.",
+    "Movement has begun. The ledger remembers every hand.",
+    "The signal has arrived. The receiver records without comment.",
+    "Participation is voluntary. Permanence is not.",
+    "What moves here remains legible after the moment passes.",
+    "The apparatus is live. Attention has become evidence.",
+    "The ledger does not forgive. It only confirms.",
+    "Every inscription commits. Nothing returns to silence."
+];
+
+const PUMPSWAP_PHRASES = [
+    "Migration complete. The seed now moves in open water.",
+    "The bonding curve has closed. The public market carries the record.",
+    "Every swap commits. Visibility continues without pause.",
+    "The apparatus is live on PumpSwap. Nothing leaves without a trace.",
+    "The ledger does not conclude. It persists in plain sight."
+];
+
+export const HauntedMarquee: React.FC<{ mode?: string }> = ({ mode = 'pre-launch' }) => {
     const [text, setText] = useState("");
     const [opacity, setOpacity] = useState(0);
 
     useEffect(() => {
-        let timeout: NodeJS.Timeout;
+        let timeout: ReturnType<typeof setTimeout>;
+        const pool = mode === 'pumpswap'
+            ? PUMPSWAP_PHRASES
+            : mode === 'pre-launch'
+                ? PRE_LAUNCH_PHRASES
+                : LIVE_PHRASES;
 
         const cycle = () => {
-            // 1. Pick Random Phrase
-            const randomPhrase = HAUNTED_PHRASES[Math.floor(Math.random() * HAUNTED_PHRASES.length)];
+            const randomPhrase = pool[Math.floor(Math.random() * pool.length)];
             setText(randomPhrase);
-
-            // 2. Phase In (Slowly)
             setOpacity(1);
 
-            // 3. Hold for 8-12 seconds (Longer display)
             timeout = setTimeout(() => {
-                // 4. Phase Out
                 setOpacity(0);
-
-                // 5. Wait 5 seconds then restart (Longer pause)
                 timeout = setTimeout(cycle, 5000);
             }, 8000 + Math.random() * 4000);
         };
 
-        // Start initial cycle
         cycle();
-
         return () => clearTimeout(timeout);
-    }, []);
+    }, [mode]);
 
     return (
         <div className="marquee-wrapper" style={{
