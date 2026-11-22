@@ -64,7 +64,23 @@ export const handler: Handler = async () => {
     const summary = (await redis.hgetall<Record<string, string>>(redisKeys.summary)) || {};
 
     const existingFees = parseFloat(summary.total_fees_claimed_sol || "0") || 0;
-    const existingDonated = parseFloat(summary.total_donated_sol || "0") || 0;
+    let existingDonated = parseFloat(summary.total_donated_sol || "0") || 0;
+    let existingPreLaunchDonated = parseFloat(summary.pre_launch_donated_sol || "0") || 0;
+
+    // On-chain donation wallet SOL balance safety check (catches deposits even if a webhook is missed)
+    try {
+        const { heliusRpc } = await import("../lib/helius");
+        const balRes = await heliusRpc<{ value: number }>("getBalance", [TOKEN_CONFIG.donationWallet]);
+        const liveDonationSol = (balRes?.value || 0) / 1e9;
+        if (liveDonationSol > existingDonated) {
+            existingDonated = liveDonationSol;
+        }
+        if (mode === "pre-launch" && liveDonationSol > existingPreLaunchDonated) {
+            existingPreLaunchDonated = liveDonationSol;
+        }
+    } catch (e) {
+        console.warn("Donation wallet balance check warning:", e);
+    }
 
     // Construct Debug Strings (matching App.tsx logic)
     // Note: in Raydium mode we might not have vSol/vToken, so we use fallbacks or price
@@ -159,6 +175,7 @@ export const handler: Handler = async () => {
             curve_progress: curveProgress.toString(),
             total_fees_claimed_sol: existingFees.toString(),
             total_donated_sol: existingDonated.toString(),
+            pre_launch_donated_sol: existingPreLaunchDonated.toString(),
             mode,
             last_updated: new Date(now).toISOString(),
 

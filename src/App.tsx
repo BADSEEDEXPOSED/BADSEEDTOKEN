@@ -53,7 +53,7 @@ type Summary = {
         <div style={{ textAlign: 'right' }}>
              {solPrice && (
                 <div className="value" style={{ fontSize: '14px', color: '#86efac' }}>
-                    1 SOL = ${solPrice.toFixed(2)}
+                    1 SOL = ${solPrice.toFixed(2)} USD
                 </div>
             )}
             <div className="small muted" style={{ fontSize: '10px', marginTop: '4px' }}>
@@ -226,14 +226,30 @@ const App: React.FC = () => {
     const [solPrice, setSolPrice] = useState<number | null>(null);
 
     useEffect(() => {
-        const fetchSolPrice = () => {
-            fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd")
-                .then(res => res.json())
-                .then(data => setSolPrice(data.solana.usd))
-                .catch(e => console.error("Failed to fetch SOL price", e));
+        const fetchSolPrice = async () => {
+            try {
+                const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (typeof data?.solana?.usd === "number") {
+                        setSolPrice(data.solana.usd);
+                        return;
+                    }
+                }
+            } catch {}
+            try {
+                const res = await fetch("https://api.coinbase.com/v2/prices/SOL-USD/spot");
+                if (res.ok) {
+                    const data = await res.json();
+                    const amt = parseFloat(data?.data?.amount);
+                    if (Number.isFinite(amt) && amt > 0) setSolPrice(amt);
+                }
+            } catch (e) {
+                console.error("Failed to fetch SOL price", e);
+            }
         };
         fetchSolPrice();
-        const interval = setInterval(fetchSolPrice, 20000); // Update every 20 seconds
+        const interval = setInterval(fetchSolPrice, 60000); // Update every 60 seconds
         return () => clearInterval(interval);
     }, []);
 
