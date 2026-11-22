@@ -338,7 +338,7 @@ const App: React.FC = () => {
         // This ensures local dev sees EXACTLY what the production server sees.
         fetchAll();
 
-        const POLLING_INTERVAL = import.meta.env.DEV ? 2000 : 10000;
+        const POLLING_INTERVAL = import.meta.env.DEV ? 2000 : 5000;
         const interval = setInterval(fetchAll, POLLING_INTERVAL);
 
         return () => clearInterval(interval);

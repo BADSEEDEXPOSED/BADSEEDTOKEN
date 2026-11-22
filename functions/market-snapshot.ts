@@ -95,7 +95,7 @@ export const handler: Handler = async () => {
 
     return {
         statusCode: 200,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=10" },
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=5" },
         body: JSON.stringify({
             status: mode === "pre-launch" ? "awaiting-launch" : (summary.data_status === "live" ? "live" : "delayed"),
             provider,

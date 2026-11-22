@@ -3,6 +3,7 @@ import type { Handler } from "@netlify/functions";
 import { redis } from "@lib/redis";
 import { redisKeys, TOKEN_CONFIG } from "@lib/tokenConfig";
 import { ENV } from "@lib/env";
+import { handler as runAmmPoller } from "./amm-poller";
 
 // Derived on-chain Creator Vault PDAs for TOKEN_CONFIG.creatorWallet (9Tyz...XWdr)
 const CREATOR_VAULT_PDAS = new Set([
@@ -47,6 +48,7 @@ export const handler: Handler = async (event) => {
         let feesClaimedDelta = 0;
         let creatorToDonationDelta = 0;
         let lastSignature = null;
+        let sawTrade = false;
 
         for (const tx of transactions) {
             if (!tx?.signature) continue;
@@ -143,6 +145,7 @@ export const handler: Handler = async (event) => {
                 }
             }
             if (netTokenDelta !== 0) {
+                sawTrade = true;
                 const isBuy = netTokenDelta > 0;
                 const absAmount = Math.abs(netTokenDelta);
                 const action = isBuy ? "Buy" : "Sell";
@@ -212,7 +215,19 @@ export const handler: Handler = async (event) => {
             console.log(`Webhook updated summary: donated +${donatedDelta} SOL, fees +${feesClaimedDelta} SOL`);
         }
 
-        return { statusCode: 200, body: JSON.stringify({ ok: true, detected: donatedDelta, feesClaimed: feesClaimedDelta }) };
+        // Fast launch-stream update: trigger live on-chain Price/MCap/Curve refresh (rate-limited to 1x per 5s)
+        if (sawTrade) {
+            try {
+                const canFastPoll = await redis.set(`token:FAST_POLL_LOCK:${TOKEN_CONFIG.mint}`, "1", { nx: true, ex: 5 });
+                if (canFastPoll) {
+                    await runAmmPoller({} as any, {} as any);
+                }
+            } catch (pollErr) {
+                console.warn("Fast trade-triggered amm-poller warning:", pollErr);
+            }
+        }
+
+        return { statusCode: 200, body: JSON.stringify({ ok: true, detected: donatedDelta, feesClaimed: feesClaimedDelta, fastPolled: sawTrade }) };
     } catch (e) {
         console.error("Webhook processing error:", e);
         return { statusCode: 500, body: "Internal Server Error" };
