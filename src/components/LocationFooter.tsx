@@ -193,8 +193,8 @@ export const LocationFooter: React.FC = () => {
         setStatus('loading');
         setError(null);
         if (!navigator.geolocation) {
-            setError('Location is not supported by this browser.');
-            setStatus('denied');
+            setError('Access blocked');
+            setStatus('prompt');
             return;
         }
         navigator.geolocation.getCurrentPosition(
@@ -209,19 +209,24 @@ export const LocationFooter: React.FC = () => {
                 });
                 setStatus('granted');
             },
-            (error) => {
-                setError(error.code === 1 ? 'Location access blocked.' : 'Location unavailable. You can retry.');
-                setStatus('denied');
+            (err) => {
+                setError(err.code === 1 ? 'Access blocked' : 'Signal unavailable');
+                setStatus('prompt');
             },
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
         );
     };
 
+    // Only auto-connect if permission is already granted; otherwise always keep the connect option available
     useEffect(() => {
-        if (status !== 'prompt') return;
-        const timer = window.setTimeout(requestLocation, 1000);
-        return () => window.clearTimeout(timer);
-    }, [status]);
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions.query({ name: 'geolocation' as PermissionName }).then((perm) => {
+                if (perm.state === 'granted') {
+                    requestLocation();
+                }
+            }).catch(() => {});
+        }
+    }, []);
 
     const dismiss = () => {
         setStatus('dismissed');
@@ -252,7 +257,7 @@ export const LocationFooter: React.FC = () => {
                     animation: 'slide-up 0.5s ease-out'
                 }}>
                     <div style={{ fontSize: '11px', color: '#e5e7eb', marginBottom: '6px' }}>
-                        Allow access calibration?
+                        {error ? error : 'Allow access calibration?'}
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button
