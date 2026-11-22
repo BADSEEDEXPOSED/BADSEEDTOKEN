@@ -465,7 +465,13 @@ const App: React.FC = () => {
 
 
                 <section className="card notes-panel">
-                    <div className="label">Notes</div>
+                    <div className="label" style={{ justifyContent: 'center', paddingRight: '10px' }}>
+                        <img
+                            src={publicAssetUrl("badseed.gif")}
+                            alt="BADSEED"
+                            style={{ width: '38px', height: '38px', objectFit: 'contain', display: 'block' }}
+                        />
+                    </div>
                     <RotatingNotes mode={summary.mode} />
                 </section>
 
