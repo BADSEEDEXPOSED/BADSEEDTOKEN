@@ -2,6 +2,13 @@
 import type { Handler } from "@netlify/functions";
 import { redis } from "@lib/redis";
 
+function isExcludedIp(ip: string): boolean {
+    const raw = (typeof process !== "undefined" && process.env?.EXCLUDED_LOG_IPS) || "";
+    if (!raw || !ip) return false;
+    const list = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    return list.includes(ip.trim());
+}
+
 export const handler: Handler = async (event) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
@@ -20,9 +27,17 @@ export const handler: Handler = async (event) => {
 
     try {
         const body = JSON.parse(event.body || '{}');
-        const headerIp = event.headers?.['cf-connecting-ip'] || event.headers?.['x-forwarded-for']?.split(',')[0]?.trim();
+        const headerIp = event.headers?.['cf-connecting-ip'] || event.headers?.['x-forwarded-for']?.split(',')[0]?.trim() || '';
         const ip = body.ip || headerIp || 'unknown';
         const { lat, lng, metadata } = body;
+
+        if (isExcludedIp(ip) || isExcludedIp(headerIp)) {
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ success: true, status: "excluded" })
+            };
+        }
 
         const entry = {
             timestamp: new Date().toISOString(),
