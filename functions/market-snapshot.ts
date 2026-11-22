@@ -14,44 +14,103 @@ function parseActivity(value: unknown): Activity | null {
     } catch { return null; }
 }
 
+async function fetchSolUsdFallback(): Promise<number | null> {
+    try {
+        const r = await fetch("https://api.coinbase.com/v2/prices/SOL-USD/spot", { signal: AbortSignal.timeout(4000) });
+        if (r.ok) {
+            const j = await r.json() as any;
+            const amt = Number(j?.data?.amount);
+            if (Number.isFinite(amt) && amt > 0) return amt;
+        }
+    } catch {}
+    return null;
+}
+
 export const handler: Handler = async () => {
     const now = Date.now();
     const summary = (await redis.hgetall<Record<string, string>>(redisKeys.summary).catch(() => null)) || {};
     const mode = summary.mode || "pre-launch";
     const raw = await redis.zrange<unknown[]>(ACTIVITY_KEY, now - 86400000, now, { byScore: true }).catch(() => []);
     const activity = (raw || []).map(parseActivity).filter((item): item is Activity => Boolean(item));
-    const buys = activity.filter(item => item.side === "buy");
-    const sells = activity.filter(item => item.side === "sell");
+    let buysCount = activity.filter(item => item.side === "buy").length;
+    let sellsCount = activity.filter(item => item.side === "sell").length;
     const measuredSol = activity.filter(item => item.sol_amount != null);
+    const measuredVolSol = measuredSol.length ? measuredSol.reduce((sum, item) => sum + (item.sol_amount || 0), 0) : null;
     const makers = new Set(activity.map(item => item.maker).filter(Boolean)).size;
+
     let provider: "on-chain-stream" | "dexscreener" | "awaiting-launch" = mode === "pre-launch" ? "awaiting-launch" : "on-chain-stream";
     let liquidityUsd: number | null = null, fdvUsd: number | null = null, marketCapUsd: number | null = null;
     let volume24hUsd: number | null = null, priceChange24hPct: number | null = null, priceUsd: number | null = null, pairUrl: string | null = null;
 
     if (mode !== "pre-launch") {
         try {
-            const response = await fetch(`https://api.dexscreener.com/token-pairs/v1/solana/${TOKEN_CONFIG.mint}`, { signal: AbortSignal.timeout(8000) });
+            const response = await fetch(`https://api.dexscreener.com/token-pairs/v1/solana/${TOKEN_CONFIG.mint}`, { signal: AbortSignal.timeout(6000) });
             if (response.ok) {
                 const pairs = await response.json() as any[];
-                const pair = pairs.filter(item => item.baseToken?.address === TOKEN_CONFIG.mint)
+                const pair = pairs
+                    .filter(item => item.baseToken?.address === TOKEN_CONFIG.mint)
                     .sort((a, b) => Number(b.liquidity?.usd || 0) - Number(a.liquidity?.usd || 0))[0];
                 if (pair) {
                     provider = "dexscreener";
                     const numeric = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : null;
-                    liquidityUsd = numeric(pair.liquidity?.usd); fdvUsd = numeric(pair.fdv); marketCapUsd = numeric(pair.marketCap);
-                    volume24hUsd = numeric(pair.volume?.h24); priceChange24hPct = numeric(pair.priceChange?.h24); priceUsd = numeric(pair.priceUsd);
+                    liquidityUsd = numeric(pair.liquidity?.usd);
+                    fdvUsd = numeric(pair.fdv);
+                    marketCapUsd = numeric(pair.marketCap);
+                    volume24hUsd = numeric(pair.volume?.h24);
+                    priceChange24hPct = numeric(pair.priceChange?.h24);
+                    priceUsd = numeric(pair.priceUsd);
                     pairUrl = typeof pair.url === "string" ? pair.url : null;
+
+                    // Merge DexScreener 24h buys/sells as a safety floor if webhook missed any early burst
+                    const dsBuys = Number(pair.txns?.h24?.buys || 0);
+                    const dsSells = Number(pair.txns?.h24?.sells || 0);
+                    if (dsBuys > buysCount) buysCount = dsBuys;
+                    if (dsSells > sellsCount) sellsCount = dsSells;
                 }
             }
-        } catch (error) { console.warn("Market snapshot provider unavailable", error); }
+        } catch (error) {
+            console.warn("Market snapshot provider unavailable", error);
+        }
+
+        // Instant launch-day fallback: if DexScreener hasn't indexed the brand-new pair yet,
+        // compute live USD Market Cap / FDV / Price / Volume directly from on-chain SOL readings
+        if (marketCapUsd == null || priceUsd == null) {
+            const priceSol = Number(summary.price_sol || 0);
+            const mcapSol = Number(summary.market_cap_sol || 0);
+            if (priceSol > 0 || mcapSol > 0) {
+                const solUsd = await fetchSolUsdFallback();
+                if (solUsd) {
+                    if (priceUsd == null && priceSol > 0) priceUsd = priceSol * solUsd;
+                    if (marketCapUsd == null && mcapSol > 0) marketCapUsd = mcapSol * solUsd;
+                    if (fdvUsd == null && mcapSol > 0) fdvUsd = mcapSol * solUsd;
+                    if (volume24hUsd == null && measuredVolSol != null) volume24hUsd = measuredVolSol * solUsd;
+                }
+            }
+        }
     }
 
-    return { statusCode: 200, headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=10" }, body: JSON.stringify({
-        status: mode === "pre-launch" ? "awaiting-launch" : (summary.data_status === "live" ? "live" : "delayed"), provider,
-        measured_at: new Date(now).toISOString(), price_usd: priceUsd, liquidity_usd: liquidityUsd, fdv_usd: fdvUsd,
-        market_cap_usd: marketCapUsd, volume_24h_usd: volume24hUsd, price_change_24h_pct: priceChange24hPct, pair_url: pairUrl,
-        trades_24h: activity.length, buys_24h: buys.length, sells_24h: sells.length, makers_24h: makers || null,
-        measured_volume_24h_sol: measuredSol.length ? measuredSol.reduce((sum, item) => sum + (item.sol_amount || 0), 0) : null,
-        recent_activity: activity.slice(-10).reverse()
-    }) };
+    const totalTrades = Math.max(activity.length, buysCount + sellsCount);
+
+    return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=10" },
+        body: JSON.stringify({
+            status: mode === "pre-launch" ? "awaiting-launch" : (summary.data_status === "live" ? "live" : "delayed"),
+            provider,
+            measured_at: new Date(now).toISOString(),
+            price_usd: priceUsd,
+            liquidity_usd: liquidityUsd,
+            fdv_usd: fdvUsd,
+            market_cap_usd: marketCapUsd,
+            volume_24h_usd: volume24hUsd,
+            price_change_24h_pct: priceChange24hPct,
+            pair_url: pairUrl,
+            trades_24h: totalTrades,
+            buys_24h: buysCount,
+            sells_24h: sellsCount,
+            makers_24h: makers || null,
+            measured_volume_24h_sol: measuredVolSol,
+            recent_activity: activity.slice(-10).reverse()
+        })
+    };
 };

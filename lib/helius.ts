@@ -2,10 +2,12 @@
 import { Connection } from "@solana/web3.js";
 import { ENV } from "./env";
 
+const PUBLIC_SOLANA_RPC = "https://api.mainnet-beta.solana.com";
+
 export function getHeliusRpcUrl(): string {
     return ENV.HELIUS_API_KEY
         ? `https://mainnet.helius-rpc.com/?api-key=${ENV.HELIUS_API_KEY}`
-        : "https://api.mainnet-beta.solana.com";
+        : PUBLIC_SOLANA_RPC;
 }
 
 let cachedUrl = "";
@@ -29,51 +31,44 @@ export const connection = new Proxy({} as Connection, {
     },
 });
 
-/** Robust RPC wrapper with Multi-Provider Fallback */
+/** Robust 3-tier RPC wrapper: Helius -> QuickNode (if set) -> Public Solana Mainnet */
 export async function heliusRpc<T = any>(method: string, params: any[]): Promise<T> {
     const payload = { jsonrpc: "2.0", id: 1, method, params };
-    const rpcUrl = getHeliusRpcUrl();
-
-    // Attempt 1: Helius (Primary)
-    try {
-        const res = await fetch(rpcUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-
-        if (res.ok) {
-            const json = await res.json();
-            if (!json.error) return json.result as T;
-            console.warn(`Helius JSON-RPC Error: ${JSON.stringify(json.error)}`);
-        } else {
-            console.warn(`Helius HTTP Error: ${res.status}`);
-        }
-    } catch (e) {
-        console.warn("Helius Connection Failed:", e);
+    const endpoints: string[] = [];
+    const primary = getHeliusRpcUrl();
+    endpoints.push(primary);
+    if (ENV.QUICKNODE_RPC_URL && !endpoints.includes(ENV.QUICKNODE_RPC_URL)) {
+        endpoints.push(ENV.QUICKNODE_RPC_URL);
+    }
+    if (!endpoints.includes(PUBLIC_SOLANA_RPC)) {
+        endpoints.push(PUBLIC_SOLANA_RPC);
     }
 
-    // Attempt 2: QuickNode (Fallback)
-    if (ENV.QUICKNODE_RPC_URL) {
-        console.log("Switching to QuickNode Fallback...");
+    let lastErr: unknown = null;
+    for (const url of endpoints) {
         try {
-            const res = await fetch(ENV.QUICKNODE_RPC_URL, {
+            const res = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(8000),
             });
-
-            if (!res.ok) throw new Error(`QuickNode HTTP ${res.status}`);
-            const json = await res.json();
-            if (json.error) throw new Error(`QuickNode JSON-RPC Error: ${JSON.stringify(json.error)}`);
-
-            return json.result as T;
+            if (res.ok) {
+                const json = await res.json();
+                if (!json.error) return json.result as T;
+                lastErr = json.error;
+                console.warn(`RPC JSON Error (${url.slice(0, 32)}):`, JSON.stringify(json.error));
+            } else {
+                lastErr = `HTTP ${res.status}`;
+                console.warn(`RPC HTTP ${res.status} (${url.slice(0, 32)})`);
+            }
         } catch (e) {
-            console.error("QuickNode Fallback Failed:", e);
+            lastErr = e;
+            console.warn(`RPC fetch failed (${url.slice(0, 32)}):`, e);
         }
     }
 
-    throw new Error("All RPC providers failed.");
+    throw new Error(`All RPC providers failed (${String(lastErr)})`);
 }
 
 /** Fetch Token Total Supply (Returns number of tokens) */
@@ -105,7 +100,6 @@ export async function getTokenBalance(wallet: string, mint: string): Promise<num
     }
 }
 
-/** Placeholder for Pump AMM metrics – returns zeros until real implementation */
 export async function getPumpAmmMetrics() {
     return { priceSol: 0, marketCapSol: 0, curveProgress: 0 };
 }
