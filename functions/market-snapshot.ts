@@ -45,6 +45,8 @@ export const handler: Handler = async () => {
     let provider: "on-chain-stream" | "dexscreener" | "awaiting-launch" = mode === "pre-launch" ? "awaiting-launch" : "on-chain-stream";
     let liquidityUsd: number | null = null, fdvUsd: number | null = null, marketCapUsd: number | null = null;
     let volume24hUsd: number | null = null, priceChange1hPct: number | null = null, priceChange24hPct: number | null = null, priceUsd: number | null = null, pairUrl: string | null = null;
+    let dexPaid = false;
+    let dexBoosts = 0;
 
     if (mode !== "pre-launch") {
         try {
@@ -65,6 +67,7 @@ export const handler: Handler = async () => {
                     priceChange24hPct = numeric(pair.priceChange?.h24);
                     priceUsd = numeric(pair.priceUsd);
                     pairUrl = typeof pair.url === "string" ? pair.url : null;
+                    dexBoosts = Number(pair.boosts?.active || 0) || 0;
 
                     const dsBuys = Number(pair.txns?.h24?.buys || 0);
                     const dsSells = Number(pair.txns?.h24?.sells || 0);
@@ -108,6 +111,8 @@ export const handler: Handler = async () => {
             price_change_1h_pct: priceChange1hPct,
             price_change_24h_pct: priceChange24hPct,
             pair_url: pairUrl,
+            dex_paid: dexPaid,
+            dex_boosts: dexBoosts,
             trades_24h: totalTrades,
             buys_24h: buysCount,
             sells_24h: sellsCount,

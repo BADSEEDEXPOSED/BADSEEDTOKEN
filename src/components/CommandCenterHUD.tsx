@@ -20,6 +20,9 @@ export type MarketSnapshot = {
     makers_24h: number | null;
     measured_volume_24h_sol: number | null;
     net_flow_24h_sol?: number | null;
+    pair_url?: string | null;
+    dex_paid?: boolean;
+    dex_boosts?: number;
     recent_activity: Activity[];
 };
 
