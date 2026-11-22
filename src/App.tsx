@@ -255,6 +255,7 @@ const App: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [solPrice, setSolPrice] = useState<number | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [liveBanner, setLiveBanner] = useState<string>("");
 
     const fetchSolPrice = async () => {
         try {
@@ -294,6 +295,21 @@ const App: React.FC = () => {
     useEffect(() => {
         fetchSolPrice();
         const interval = setInterval(fetchSolPrice, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const pollBanner = async () => {
+            try {
+                const res = await fetch("https://badseed.exposed/.netlify/functions/dapp-config", { cache: "no-store" });
+                if (res.ok) {
+                    const data = await res.json();
+                    setLiveBanner(typeof data?.liveBanner === "string" ? data.liveBanner.trim() : "");
+                }
+            } catch {}
+        };
+        pollBanner();
+        const interval = setInterval(pollBanner, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -420,6 +436,27 @@ const App: React.FC = () => {
                 </header>
 
                 <div className="card" role="status">{summary.stale ? "Data delayed — last confirmed readings shown" : summary.data_status === "awaiting-launch" ? "Pre-launch · starting curve estimates shown · checking for launch every minute" : summary.data_status === "live" ? "Live on-chain data" : "Market data unavailable"}</div>
+                {liveBanner && (
+                    <div
+                        className="card"
+                        style={{
+                            borderLeft: '3px solid #9ab886',
+                            borderColor: 'rgba(154, 184, 134, 0.55)',
+                            background: 'linear-gradient(115deg, rgba(127, 166, 80, 0.2), rgba(7, 11, 17, 0.85))',
+                            color: '#eef5fc',
+                            fontFamily: 'ui-monospace, Consolas, monospace',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            letterSpacing: '0.12em',
+                            textAlign: 'center',
+                            padding: '7px 14px',
+                            textTransform: 'uppercase',
+                            boxShadow: '0 0 18px rgba(127, 166, 80, 0.18)'
+                        }}
+                    >
+                        {liveBanner}
+                    </div>
+                )}
                 <section className="grid">
                     <div className="card debug-card">
                         <div className="label">Price</div>
