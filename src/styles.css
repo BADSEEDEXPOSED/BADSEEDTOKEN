@@ -1027,3 +1027,71 @@ h1 { font-size: 25px; letter-spacing: .12em; font-weight: 650; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* Stream-legible font boost & roomier side pillars (fits cleanly in viewport) */
+.side-pillar {
+  width: 162px;
+  padding: 10px 12px;
+  gap: 6px;
+}
+.pillar-content {
+  gap: 6px;
+}
+.pillar-title {
+  font-size: 11px !important;
+  letter-spacing: 0.16em !important;
+  padding-bottom: 5px;
+}
+.telemetry-row {
+  margin-bottom: 3px;
+}
+.telemetry-row span {
+  font-size: 9.5px;
+  color: #97a6b6;
+}
+.telemetry-row strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.flow-readout {
+  font-size: 11px;
+  font-weight: 600;
+}
+.flow-counts {
+  font: 600 10px ui-monospace, Consolas, monospace;
+  color: #97a6b6;
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+.stream-source {
+  font-size: 8.5px;
+  color: #8c9cac;
+}
+.seed-message-feed {
+  width: calc(100% - 416px);
+}
+.seed-feed-label {
+  font-size: 10px;
+}
+.seed-feed-message p {
+  font-size: 15px;
+}
+.hud-label {
+  font-size: 9.5px;
+}
+.hud-value {
+  font-size: 14px;
+}
+.app-root > .grid .label,
+.app-root > .capital-panel > .label,
+.app-root > .curve-panel > .label,
+.notes-panel > .label {
+  font-size: 10.5px;
+}
+.app-root > .grid .value {
+  font-size: clamp(15px, 1.65vw, 19px);
+}
+.debug-math {
+  font-size: 10px;
+}

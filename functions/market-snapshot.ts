@@ -34,13 +34,17 @@ export const handler: Handler = async () => {
     const activity = (raw || []).map(parseActivity).filter((item): item is Activity => Boolean(item));
     let buysCount = activity.filter(item => item.side === "buy").length;
     let sellsCount = activity.filter(item => item.side === "sell").length;
+    const largeTrades24h = activity.filter(item => item.tier === "large").length;
     const measuredSol = activity.filter(item => item.sol_amount != null);
     const measuredVolSol = measuredSol.length ? measuredSol.reduce((sum, item) => sum + (item.sol_amount || 0), 0) : null;
+    const netFlowSol = measuredSol.length
+        ? measuredSol.reduce((sum, item) => sum + (item.side === "buy" ? (item.sol_amount || 0) : -(item.sol_amount || 0)), 0)
+        : null;
     const makers = new Set(activity.map(item => item.maker).filter(Boolean)).size;
 
     let provider: "on-chain-stream" | "dexscreener" | "awaiting-launch" = mode === "pre-launch" ? "awaiting-launch" : "on-chain-stream";
     let liquidityUsd: number | null = null, fdvUsd: number | null = null, marketCapUsd: number | null = null;
-    let volume24hUsd: number | null = null, priceChange24hPct: number | null = null, priceUsd: number | null = null, pairUrl: string | null = null;
+    let volume24hUsd: number | null = null, priceChange1hPct: number | null = null, priceChange24hPct: number | null = null, priceUsd: number | null = null, pairUrl: string | null = null;
 
     if (mode !== "pre-launch") {
         try {
@@ -57,11 +61,11 @@ export const handler: Handler = async () => {
                     fdvUsd = numeric(pair.fdv);
                     marketCapUsd = numeric(pair.marketCap);
                     volume24hUsd = numeric(pair.volume?.h24);
+                    priceChange1hPct = numeric(pair.priceChange?.h1);
                     priceChange24hPct = numeric(pair.priceChange?.h24);
                     priceUsd = numeric(pair.priceUsd);
                     pairUrl = typeof pair.url === "string" ? pair.url : null;
 
-                    // Merge DexScreener 24h buys/sells as a safety floor if webhook missed any early burst
                     const dsBuys = Number(pair.txns?.h24?.buys || 0);
                     const dsSells = Number(pair.txns?.h24?.sells || 0);
                     if (dsBuys > buysCount) buysCount = dsBuys;
@@ -72,8 +76,6 @@ export const handler: Handler = async () => {
             console.warn("Market snapshot provider unavailable", error);
         }
 
-        // Instant launch-day fallback: if DexScreener hasn't indexed the brand-new pair yet,
-        // compute live USD Market Cap / FDV / Price / Volume directly from on-chain SOL readings
         if (marketCapUsd == null || priceUsd == null) {
             const priceSol = Number(summary.price_sol || 0);
             const mcapSol = Number(summary.market_cap_sol || 0);
@@ -103,13 +105,16 @@ export const handler: Handler = async () => {
             fdv_usd: fdvUsd,
             market_cap_usd: marketCapUsd,
             volume_24h_usd: volume24hUsd,
+            price_change_1h_pct: priceChange1hPct,
             price_change_24h_pct: priceChange24hPct,
             pair_url: pairUrl,
             trades_24h: totalTrades,
             buys_24h: buysCount,
             sells_24h: sellsCount,
+            large_trades_24h: largeTrades24h,
             makers_24h: makers || null,
             measured_volume_24h_sol: measuredVolSol,
+            net_flow_24h_sol: netFlowSol,
             recent_activity: activity.slice(-10).reverse()
         })
     };
