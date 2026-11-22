@@ -22,6 +22,7 @@ export const handler: Handler = async (event) => {
 
         return {
             statusCode: 200,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
             body: JSON.stringify({
                 totalVisits: visitors.length,
                 uniqueIPs,
@@ -34,6 +35,7 @@ export const handler: Handler = async (event) => {
         console.error("Visitor get error:", e);
         return {
             statusCode: 200,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
             body: JSON.stringify({
                 totalVisits: 0,
                 uniqueIPs: 0,

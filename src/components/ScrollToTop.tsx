@@ -5,24 +5,10 @@ export const ScrollToTop: React.FC = () => {
 
     useEffect(() => {
         const toggleVisibility = () => {
-            // Calculate scroll percentage
-            // We want to know if we are in the "bottom 15%" of the page content.
-            // Formula: If (scrollY) > (Total Height - Viewport) * 0.85
-
             const scrolledMap = document.documentElement.scrollTop || document.body.scrollTop;
             const totalHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-
-            // Safety check for unsizable pages
             if (totalHeight <= 0) return;
-
-            const scrollPercentage = scrolledMap / totalHeight;
-
-            // User Requirement: "does not show if the page is showing the top 75%" (Bottom 25%)
-            if (scrollPercentage > 0.75) {
-                setVisible(true);
-            } else {
-                setVisible(false);
-            }
+            setVisible(scrolledMap / totalHeight > 0.75);
         };
 
         window.addEventListener('scroll', toggleVisibility);
@@ -30,10 +16,7 @@ export const ScrollToTop: React.FC = () => {
     }, []);
 
     const scrollToTop = () => {
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (
@@ -44,29 +27,33 @@ export const ScrollToTop: React.FC = () => {
                 bottom: '20px',
                 right: '20px',
                 zIndex: 100,
-                padding: '12px',
-                borderRadius: '50%',
-                background: 'rgba(0, 0, 0, 0.8)',
-                color: '#4ade80', // Green Accent
-                border: '1px solid #4ade80',
+                padding: '10px',
+                borderRadius: '2px 10px 2px 2px',
+                background: 'linear-gradient(115deg, rgba(195, 216, 237, 0.14), rgba(7, 11, 17, 0.84) 55%, rgba(91, 111, 133, 0.12))',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                color: '#eef5fc',
+                border: '1px solid rgba(186, 202, 219, 0.34)',
+                borderLeft: '2px solid rgba(229, 239, 250, 0.85)',
                 cursor: 'pointer',
                 opacity: visible ? 1 : 0,
-                visibility: visible ? 'visible' : 'hidden', // Prevent clicks when hidden
-                transition: 'opacity 0.4s ease, visibility 0.4s',
-                boxShadow: '0 0 10px rgba(74, 222, 128, 0.3)',
+                visibility: visible ? 'visible' : 'hidden',
+                transition: 'opacity 0.35s ease, visibility 0.35s, border-color 0.2s ease',
+                boxShadow: 'inset 0 1px rgba(244, 249, 255, 0.14), 0 6px 22px rgba(0, 0, 0, 0.55)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '44px',
-                height: '44px',
+                width: '42px',
+                height: '42px',
                 pointerEvents: 'auto'
             }}
             className="scroll-to-top-btn"
             aria-label="Scroll to top"
+            title="Scroll to top"
         >
             <svg
-                width="20"
-                height="20"
+                width="18"
+                height="18"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"

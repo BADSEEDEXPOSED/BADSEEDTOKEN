@@ -27,12 +27,14 @@ export const handler: Handler = async (event) => {
 
         return {
             statusCode: 200,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
             body: JSON.stringify(response)
         };
     } catch (e) {
         console.error("Metrics error:", e);
         return {
             statusCode: 200,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
             body: JSON.stringify({
                 price: [],
                 market_cap: [],

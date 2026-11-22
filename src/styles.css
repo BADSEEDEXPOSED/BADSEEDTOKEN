@@ -435,28 +435,6 @@ h1 {
   25% {
     opacity: 0.3;
   }
-}
-
-@keyframes flicker-in {
-  0% {
-    opacity: 0;
-  }
-
-  5% {
-    opacity: 0;
-  }
-
-  10% {
-    opacity: 0.1;
-  }
-
-  15% {
-    opacity: 0;
-  }
-
-  25% {
-    opacity: 0.3;
-  }
 
   30% {
     opacity: 0.1;
@@ -569,7 +547,7 @@ h1 {
 
 .hud-item {
   text-align: center;
-  color: var(--color-silver);
+  color: var(--accent-color);
   font-family: 'Space Mono', monospace;
   font-size: 10px;
   text-transform: uppercase;
