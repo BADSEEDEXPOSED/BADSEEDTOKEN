@@ -91,7 +91,7 @@ const LocationDisplay: React.FC<{ coords: { lat: number; lng: number, type: 'GPS
                     /* View Logs Link - Always visible once granted */
                     <div style={{ marginBottom: '2px', borderBottom: '1px dashed #4ade80', paddingBottom: '2px' }}>
                         <a
-                            href={functionUrl('view-logs')}
+                            href={functionUrl('get-visitor-logs')}
                             target="_blank"
                             rel="noreferrer"
                             style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: 'bold' }}

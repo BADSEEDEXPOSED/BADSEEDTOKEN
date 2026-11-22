@@ -20,6 +20,7 @@ const V1_ROUTES: Record<string, any> = {
   'claims': claims,
   'fee-worker': feeWorker,
   'get-visitor-logs': getVisitorLogs,
+  'view-logs': getVisitorLogs,
   'log-visitor': logVisitor,
   'market-snapshot': marketSnapshot,
   'message-feed': messageFeed,
