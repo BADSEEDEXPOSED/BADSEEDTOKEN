@@ -1,5 +1,5 @@
 // Verified Push: 2025-12-13 22:32
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { functionUrl, publicAssetUrl } from "./api";
 import { MessageFeed } from './components/MessageFeed';
 import { Buffer } from "buffer";
@@ -167,31 +167,61 @@ const RotatingNotes: React.FC<{ mode: string }> = ({ mode }) => {
 
     const [index, setIndex] = useState(0);
     const [fadeState, setFadeState] = useState<'in' | 'out'>('in');
+    const viewportRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setFadeState('out'); // Fade out (3s duration)
+            setFadeState('out'); // Pulse fade out (3s duration)
             setTimeout(() => {
                 setIndex((prev) => {
                     const next = (prev + 1) % NOTES.length;
-                    // If the next note is the Lore Note (Index 2), pick a random phrase
                     if (next === 2) {
                         const randomLore = LORE_PHRASES[Math.floor(Math.random() * LORE_PHRASES.length)];
                         setLore(randomLore);
                     }
                     return next;
                 });
-                setFadeState('in'); // Fade in (3s duration)
+                setFadeState('in'); // Pulse fade in (3s duration)
             }, 4000); // 3s animation + 1s void
         }, 30000); // 30 seconds per note cycle
 
         return () => clearInterval(interval);
-    }, [NOTES.length]); // NOTES.length is constant (5)
+    }, [NOTES.length]);
+
+    // Slowly scroll down through multi-line notes while visible, then hold before pulse fade-out
+    useEffect(() => {
+        const el = viewportRef.current;
+        if (!el) return;
+        el.scrollTop = 0;
+        if (fadeState !== 'in') return;
+
+        let rafId = 0;
+        const startDelayMs = 3800; // Wait for 3s flicker-in + brief read pause
+        const scrollDurationMs = 19000; // Smooth slow scroll across ~19s, leaving ~4s hold before fade-out
+        const startTime = performance.now();
+
+        const step = (now: number) => {
+            const maxScroll = el.scrollHeight - el.clientHeight;
+            if (maxScroll <= 2) return;
+            const elapsed = now - startTime - startDelayMs;
+            if (elapsed > 0) {
+                const progress = Math.min(1, elapsed / scrollDurationMs);
+                el.scrollTop = progress * maxScroll;
+                if (progress >= 1) return;
+            }
+            rafId = requestAnimationFrame(step);
+        };
+
+        rafId = requestAnimationFrame(step);
+        return () => cancelAnimationFrame(rafId);
+    }, [index, lore, fadeState]);
 
     return (
-        <p className={`small muted fade-text ${fadeState}`} style={{ minHeight: '60px', whiteSpace: 'pre-line' }}>
-            {NOTES[index]}
-        </p>
+        <div ref={viewportRef} className="notes-viewport">
+            <p className={`muted fade-text ${fadeState}`} style={{ whiteSpace: 'pre-line' }}>
+                {NOTES[index]}
+            </p>
+        </div>
     );
 };
 
