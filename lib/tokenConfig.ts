@@ -4,7 +4,7 @@ export const TOKEN_CONFIG = {
     symbol: "BADSEED",
     name: "BadSeed",
     creatorWallet: "9TyzcephhXEw67piYNc72EJtgVmbq3AZhyPFSvdfXWdr",
-    donationWallet: "CZ7Lv3QNVxbBivGPBhJG7m1HpCtfEDjEusBjjZ3qmVz5",
+    donationWallet: "25T3BcqfWeyoGLcr8wrsywmTyFLAzon5BRSNGafBKGKZ",
     network: "mainnet-beta"
 };
 
