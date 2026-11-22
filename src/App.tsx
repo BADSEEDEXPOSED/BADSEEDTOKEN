@@ -311,7 +311,6 @@ const App: React.FC = () => {
     return (
         <>
             <iframe id="background-frame" src={publicAssetUrl("background.html")} title="Background"></iframe>
-            <MessageFeed />
             <a className="seed-page-switch" href="https://badseed.exposed/">Enter the Seed</a>
             <div className="app-root">
                 <header className="header">
@@ -410,6 +409,7 @@ const App: React.FC = () => {
                     {/* Overlays / Siblings */}
                     <ReservesHUD data={summary} />
                     <HauntedMarquee />
+                    <MessageFeed />
                     <CommandCenterHUD market={market} mode={summary?.mode} stale={summary?.stale} />
                 </section>
                 <div className="spacer"></div>
