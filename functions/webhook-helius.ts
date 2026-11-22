@@ -78,47 +78,58 @@ export const handler: Handler = async (event) => {
                 lastSignature = tx.signature;
             }
 
-            // STRATEGY 3: Real-Time Ticker (Capture Buys/Sells)
-            // Enhanced Logic: Analyze Volume & Direction via AccountData
+            // STRATEGY 3: Real-Time Order Flow (Capture Pump.fun & PumpSwap Buys/Sells)
+            // In Helius Enhanced Txs, tokenBalanceChanges often live on the user's ATA entry (userAccount === feePayer)
+            let netTokenDelta = 0;
+            let traderSolDelta = 0;
             if (tx.accountData && Array.isArray(tx.accountData)) {
-                // Find the user who paid for the tx (likely the trader)
-                const trader = tx.accountData.find((a: any) => a.account === tx.feePayer);
+                const feePayerEntry = tx.accountData.find((a: any) => a.account === tx.feePayer);
+                if (feePayerEntry) traderSolDelta = Number(feePayerEntry.nativeBalanceChange || 0) / 1e9;
 
-                if (trader && trader.tokenBalanceChanges && Array.isArray(trader.tokenBalanceChanges)) {
-                    // Check if this trader traded OUR token
-                    const tokenChange = trader.tokenBalanceChanges.find((t: any) => t.mint === TOKEN_CONFIG.mint);
-
-                    if (tokenChange) {
-                        const rawAmount = tokenChange.rawTokenAmount ? parseFloat(tokenChange.rawTokenAmount.tokenAmount) : 0;
-                        const decimals = tokenChange.rawTokenAmount ? tokenChange.rawTokenAmount.decimals : 6;
-                        const changeAmount = rawAmount / Math.pow(10, decimals);
-
-                        // Determine Direction
-                        // Positive Change = User Bought (Gained Tokens)
-                        // Negative Change = User Sold (Lost Tokens)
-                        const isBuy = changeAmount > 0;
-                        const absAmount = Math.abs(changeAmount);
-
-                        if (absAmount > 0) {
-                            const action = isBuy ? "Buy" : "Sell";
-                            const msg = `${action}: ${absAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${TOKEN_CONFIG.symbol}`;
-                            const key = `token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`;
-                            await redis.lpush(key, msg);
-                            await redis.ltrim(key, 0, 9);
-
-                            const traderSolDelta = Number(trader.nativeBalanceChange || 0) / 1e9;
-                            const eventTime = Number(tx.timestamp || Math.floor(Date.now() / 1000)) * 1000;
-                            const activity = { signature: tx.signature, timestamp: eventTime, side: isBuy ? "buy" : "sell",
-                                token_amount: absAmount, sol_amount: traderSolDelta ? Math.abs(traderSolDelta) : null,
-                                maker: tx.feePayer || "", tier: absAmount > 1000000 ? "large" : "standard" };
-                            const activityKey = `token:ACTIVITY_V2:${TOKEN_CONFIG.mint}`;
-                            await redis.zadd(activityKey, { score: eventTime, member: JSON.stringify(activity) });
-                            await redis.zremrangebyscore(activityKey, 0, Date.now() - 7 * 86400000);
-
-                            console.log(`[Ticker] ${msg}`);
+                for (const entry of tx.accountData) {
+                    if (!Array.isArray(entry.tokenBalanceChanges)) continue;
+                    for (const t of entry.tokenBalanceChanges) {
+                        if (t.mint !== TOKEN_CONFIG.mint) continue;
+                        if (t.userAccount === tx.feePayer || entry.account === tx.feePayer) {
+                            const rawAmount = t.rawTokenAmount ? parseFloat(t.rawTokenAmount.tokenAmount) : 0;
+                            const decimals = t.rawTokenAmount ? t.rawTokenAmount.decimals : 6;
+                            netTokenDelta += rawAmount / Math.pow(10, decimals);
                         }
                     }
                 }
+            }
+            if (netTokenDelta === 0 && Array.isArray(tx.tokenTransfers)) {
+                for (const tr of tx.tokenTransfers) {
+                    if (tr.mint !== TOKEN_CONFIG.mint) continue;
+                    const amt = Number(tr.tokenAmount || 0);
+                    if (tr.toUserAccount === tx.feePayer) netTokenDelta += amt;
+                    else if (tr.fromUserAccount === tx.feePayer) netTokenDelta -= amt;
+                }
+            }
+            if (netTokenDelta !== 0) {
+                const isBuy = netTokenDelta > 0;
+                const absAmount = Math.abs(netTokenDelta);
+                const action = isBuy ? "Buy" : "Sell";
+                const msg = `${action}: ${absAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${TOKEN_CONFIG.symbol}`;
+                const key = `token:RECENT_ACTIVITY:${TOKEN_CONFIG.mint}`;
+                await redis.lpush(key, msg);
+                await redis.ltrim(key, 0, 9);
+
+                const eventTime = Number(tx.timestamp || Math.floor(Date.now() / 1000)) * 1000;
+                const activity = {
+                    signature: tx.signature,
+                    timestamp: eventTime,
+                    side: isBuy ? "buy" : "sell",
+                    token_amount: absAmount,
+                    sol_amount: traderSolDelta ? Math.abs(traderSolDelta) : null,
+                    maker: tx.feePayer || "",
+                    tier: absAmount > 1000000 ? "large" : "standard",
+                };
+                const activityKey = `token:ACTIVITY_V2:${TOKEN_CONFIG.mint}`;
+                await redis.zadd(activityKey, { score: eventTime, member: JSON.stringify(activity) });
+                await redis.zremrangebyscore(activityKey, 0, Date.now() - 7 * 86400000);
+
+                console.log(`[Ticker] ${msg}`);
             }
         }
 

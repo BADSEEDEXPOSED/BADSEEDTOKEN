@@ -1,18 +1,13 @@
 // lib/env.ts
 export function requireEnv(name: string): string {
-    const value = process.env[name];
-    if (!value) {
-        console.warn(`Missing env var: ${name} (Using mock/empty for local dev)`);
-        return "";
-    }
-    return value;
+    return (typeof process !== "undefined" && process.env && process.env[name]) || "";
 }
 
 export const ENV = {
-    UPSTASH_REDIS_REST_URL: requireEnv("UPSTASH_REDIS_REST_URL"),
-    UPSTASH_REDIS_REST_TOKEN: requireEnv("UPSTASH_REDIS_REST_TOKEN"),
-    HELIUS_API_KEY: requireEnv("HELIUS_API_KEY"),
-    CREATOR_SECRET_KEY: requireEnv("CREATOR_SECRET_KEY"), // JSON array string of 64-byte secret key
-    WEBHOOK_AUTH_TOKEN: requireEnv("WEBHOOK_AUTH_TOKEN"),
-    QUICKNODE_RPC_URL: process.env.QUICKNODE_RPC_URL || ""
+    get UPSTASH_REDIS_REST_URL() { return requireEnv("UPSTASH_REDIS_REST_URL"); },
+    get UPSTASH_REDIS_REST_TOKEN() { return requireEnv("UPSTASH_REDIS_REST_TOKEN"); },
+    get HELIUS_API_KEY() { return requireEnv("HELIUS_API_KEY"); },
+    get CREATOR_SECRET_KEY() { return requireEnv("CREATOR_SECRET_KEY"); },
+    get WEBHOOK_AUTH_TOKEN() { return requireEnv("WEBHOOK_AUTH_TOKEN"); },
+    get QUICKNODE_RPC_URL() { return requireEnv("QUICKNODE_RPC_URL"); },
 };
